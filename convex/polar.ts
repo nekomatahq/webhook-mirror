@@ -16,16 +16,8 @@ export const polar = new Polar(components.polar, {
       email: user.email ?? "",
     };
   },
-  // Optional: Configure static keys for referencing your products.
-  // Alternatively you can use the `listAllProducts` function to get
-  // the product data and sort it out in your UI however you like
-  // (eg., by price, name, recurrence, etc.).
-  // Map your product keys to Polar product IDs (you can also use env vars for this)
-  // Replace these keys with whatever is useful for your app (eg., "pro", "proMonthly",
-  // whatever you want), and replace the values with the actual product IDs from your
-  // Polar dashboard
   products: {
-    premiumMonthly: "product_id_from_polar",
+    premiumMonthly: "b0d785a4-9f0b-466b-b1a5-0955c7fda044",
   },
 });
 
