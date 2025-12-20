@@ -62,7 +62,7 @@ export default function BillingPage() {
   }
 
   const hasActiveSubscription = subscriptionStatus.hasActiveSubscription;
-  const productIds = products?.premiumMonthly
+  const productIds = products?.premiumMonthly?.id
     ? [products.premiumMonthly.id]
     : [];
 

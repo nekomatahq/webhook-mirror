@@ -51,7 +51,7 @@ export function redactHeaders(headers: Record<string, string>): Record<string, s
 /**
  * Redacts sensitive fields from an object
  */
-export function redactObject(obj: any): any {
+export function redactObject(obj: any, visited: WeakSet<object> = new WeakSet()): any {
   if (obj === null || obj === undefined) {
     return obj;
   }
@@ -60,8 +60,15 @@ export function redactObject(obj: any): any {
     return obj;
   }
 
+  // Handle circular references
+  if (visited.has(obj)) {
+    return "[CIRCULAR]";
+  }
+
+  visited.add(obj);
+
   if (Array.isArray(obj)) {
-    return obj.map((item) => redactObject(item));
+    return obj.map((item) => redactObject(item, visited));
   }
 
   const redacted: Record<string, any> = {};
@@ -69,8 +76,8 @@ export function redactObject(obj: any): any {
     const lowerKey = key.toLowerCase();
     if (SENSITIVE_KEYS.some((k) => lowerKey.includes(k))) {
       redacted[key] = "[REDACTED]";
-    } else if (typeof value === "object") {
-      redacted[key] = redactObject(value);
+    } else if (typeof value === "object" && value !== null) {
+      redacted[key] = redactObject(value, visited);
     } else {
       redacted[key] = value;
     }

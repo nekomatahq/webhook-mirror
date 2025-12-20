@@ -330,11 +330,25 @@ export class Polar<
       getConfiguredProducts: queryGeneric({
         args: {},
         handler: async (ctx) => {
-          console.log("[Polar:api:getConfiguredProducts]");
+          console.log("[Polar:api:getConfiguredProducts] - fetching configured products");
           const products = await this.listProducts(ctx);
-          return mapValues(this.products, (productId) =>
-            products.find((p: { id: string }) => p.id === productId),
-          );
+          const mapped = mapValues(this.products, (productId, key) => {
+            const product = products.find((p: { id: string }) => p.id === productId);
+            if (!product) {
+              console.warn(`[Polar:api:getConfiguredProducts] - Product not found for key '${key}' with id '${productId}'`);
+            } else {
+              console.log(`[Polar:api:getConfiguredProducts] - Found product for key '${key}'`, { productId });
+            }
+            return {
+              id: productId,
+              product: product ?? null,
+            };
+          });
+          console.log("[Polar:api:getConfiguredProducts] - result", {
+            keys: Object.keys(mapped),
+            missing: Object.keys(mapped).filter(k => !mapped[k]?.product)
+          });
+          return mapped;
         },
       }),
       listAllProducts: queryGeneric({
