@@ -155,56 +155,83 @@ export const ReplayForm = ({ requestId }: ReplayFormProps) => {
       {result && (
         <div
           className={`rounded-lg border p-4 ${
-            result.error
+            result.error || (result.status >= 400 && result.status < 600)
               ? "border-destructive bg-destructive/5"
               : "border-green-500/50 bg-green-50 dark:bg-green-950/20"
           }`}
         >
-          {result.error ? (
+          {result.error || (result.status >= 400 && result.status < 600) ? (
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
                 <div className="flex-1 space-y-2">
-                  {(() => {
-                    const parsed = parseErrorMessage(result.error);
-                    return (
-                      <>
-                        <div>
-                          <p className="text-sm font-semibold text-destructive">
-                            {parsed.title}
-                          </p>
-                          {parsed.explanation && (
-                            <p className="text-sm text-muted-foreground mt-1.5">
-                              {parsed.explanation}
+                  {result.error ? (
+                    (() => {
+                      const parsed = parseErrorMessage(result.error);
+                      return (
+                        <>
+                          <div>
+                            <p className="text-sm font-semibold text-destructive">
+                              {parsed.title}
                             </p>
-                          )}
-                        </div>
-                        {parsed.suggestion && (
-                          <div className="rounded-md bg-muted/50 border border-border/50 p-3 space-y-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                💡 Solution
-                              </span>
-                            </div>
-                            <p className="text-sm text-foreground leading-relaxed">
-                              {parsed.suggestion}
-                            </p>
-                            {parsed.suggestion.toLowerCase().includes("ngrok") && (
-                              <a
-                                href="https://ngrok.com"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline mt-2"
-                              >
-                                Learn more about ngrok
-                                <ExternalLink className="h-3 w-3" />
-                              </a>
+                            {parsed.explanation && (
+                              <p className="text-sm text-muted-foreground mt-1.5">
+                                {parsed.explanation}
+                              </p>
                             )}
                           </div>
-                        )}
-                      </>
-                    );
-                  })()}
+                          {parsed.suggestion && (
+                            <div className="rounded-md bg-muted/50 border border-border/50 p-3 space-y-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                  💡 Solution
+                                </span>
+                              </div>
+                              <p className="text-sm text-foreground leading-relaxed">
+                                {parsed.suggestion}
+                              </p>
+                              {parsed.suggestion.toLowerCase().includes("ngrok") && (
+                                <a
+                                  href="https://ngrok.com"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline mt-2"
+                                >
+                                  Learn more about ngrok
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()
+                  ) : (
+                    <div>
+                      <p className="text-sm font-semibold text-destructive">
+                        {result.status >= 500
+                          ? "Server Error"
+                          : result.status === 404
+                          ? "Not Found"
+                          : result.status === 403
+                          ? "Forbidden"
+                          : result.status === 401
+                          ? "Unauthorized"
+                          : "Request Failed"}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1.5">
+                        The target server returned an error response.
+                      </p>
+                      <div className="mt-2 rounded-md bg-muted/50 border border-border/50 p-3">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">
+                          Status Code
+                        </p>
+                        <p className="text-sm font-mono font-medium text-foreground">
+                          {result.status} {result.statusText}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
