@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 import { useAction } from "convex/react";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 
 interface ReplayFormProps {
   requestId: Id<"requests">;
@@ -40,11 +41,15 @@ export const ReplayForm = ({ requestId }: ReplayFormProps) => {
         statusText: response.statusText,
         error: response.error,
       });
-    } catch (error) {
+    } catch (error: any) {
+      // Extract error message from ConvexError
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+
       setResult({
         status: 0,
         statusText: "",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: errorMessage,
       });
     } finally {
       setLoading(false);
@@ -63,22 +68,46 @@ export const ReplayForm = ({ requestId }: ReplayFormProps) => {
           disabled={loading}
         />
         <Button type="submit" disabled={loading || !targetUrl.trim()}>
-          {loading ? "Replaying..." : "Replay request"}
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Replaying...
+            </>
+          ) : (
+            "Replay request"
+          )}
         </Button>
       </form>
 
       {result && (
-        <div className="rounded-md border p-4">
+        <div
+          className={`rounded-lg border p-4 ${
+            result.error
+              ? "border-destructive bg-destructive/5"
+              : "border-green-500/50 bg-green-50 dark:bg-green-950/20"
+          }`}
+        >
           {result.error ? (
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-destructive">Error</p>
-              <p className="text-sm text-muted-foreground">{result.error}</p>
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-destructive">
+                  {result.error}
+                </p>
+              </div>
             </div>
           ) : (
-            <div className="space-y-1">
-              <p className="text-sm font-medium">
-                Status: {result.status} {result.statusText}
-              </p>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-green-700 dark:text-green-300">
+                  Request sent successfully
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Status: <span className="font-mono font-medium">{result.status}</span>{" "}
+                  {result.statusText}
+                </p>
+              </div>
             </div>
           )}
         </div>

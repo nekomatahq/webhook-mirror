@@ -1,5 +1,5 @@
 import { action } from "../_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "../_generated/api";
 import { redactUserId, redactHeaders, redactBody, createSafeLog } from "../utils/logging";
@@ -23,7 +23,7 @@ export const replayRequest = action({
       console.log("[REQUESTS] replayRequest - unauthorized", {
         requestId: args.requestId,
       });
-      throw new Error("Unauthorized");
+      throw new ConvexError("Unauthorized");
     }
 
     console.log("[REQUESTS] replayRequest", {
@@ -41,7 +41,7 @@ export const replayRequest = action({
         requestId: args.requestId,
         userId: redactUserId(userId),
       });
-      throw new Error("Request not found");
+      throw new ConvexError("Request not found");
     }
 
     // Validate target URL early

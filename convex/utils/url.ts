@@ -2,6 +2,8 @@
  * Utility functions for URL validation
  */
 
+import { ConvexError } from "convex/values";
+
 /**
  * Checks if a hostname is localhost or a private IP address
  */
@@ -44,19 +46,19 @@ export function isLocalhostOrPrivateIP(hostname: string): boolean {
 
 /**
  * Validates a URL and checks if it's accessible from Convex actions
- * @throws Error if URL is invalid or points to localhost/private IP
+ * @throws ConvexError if URL is invalid or points to localhost/private IP
  */
 export function validateReplayUrl(urlString: string): URL {
   let parsedUrl: URL;
   try {
     parsedUrl = new URL(urlString);
   } catch {
-    throw new Error("Invalid target URL");
+    throw new ConvexError("Invalid target URL. Please provide a valid URL.");
   }
 
   if (isLocalhostOrPrivateIP(parsedUrl.hostname)) {
-    throw new Error(
-      "Cannot replay to localhost or private IP addresses. Convex actions run in the cloud and cannot access local resources. Use a public URL or a tunnel service (like ngrok) for localhost testing."
+    throw new ConvexError(
+      "Cannot replay to localhost or private IP addresses. Convex actions run in the cloud and cannot access local resources. Use a public URL or a tunnel service like ngrok for localhost testing."
     );
   }
 
