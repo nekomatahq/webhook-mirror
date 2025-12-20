@@ -17,7 +17,7 @@ export const polar = new Polar(components.polar, {
     };
   },
   products: {
-    premiumMonthly: "b0d785a4-9f0b-466b-b1a5-0955c7fda044",
+    premiumMonthly: process.env.POLAR_PREMIUM_MONTHLY_PRODUCT_ID ?? "",
   },
 });
 
