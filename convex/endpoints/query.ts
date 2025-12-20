@@ -118,8 +118,10 @@ export const getEndpointBySlug = query({
       slug: args.slug,
     });
 
-    const endpoints = await ctx.db.query("endpoints").collect();
-    const endpoint = endpoints.find((e) => e.slug === args.slug);
+    const endpoint = await ctx.db
+      .query("endpoints")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
 
     if (endpoint) {
       console.log("[ENDPOINTS] getEndpointBySlug - found", {

@@ -35,8 +35,10 @@ export const createEndpoint = mutation({
     let exists = true;
     while (exists) {
       slug = generateSlug();
-      const endpoints = await ctx.db.query("endpoints").collect();
-      const existing = endpoints.find((e) => e.slug === slug);
+      const existing = await ctx.db
+        .query("endpoints")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .first();
       exists = existing !== null;
     }
 

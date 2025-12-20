@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +14,27 @@ import { Badge } from "@/components/ui/badge";
 export default function EndpointsPage() {
   const router = useRouter();
   const endpoints = useQuery(api.endpoints.query.listEndpoints);
+  const createEndpoint = useMutation(api.endpoints.mutation.createEndpoint);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [endpointName, setEndpointName] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  const handleCreateEndpoint = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!endpointName.trim()) return;
+
+    setCreating(true);
+    try {
+      const result = await createEndpoint({ name: endpointName.trim() });
+      setEndpointName("");
+      setShowCreateForm(false);
+      router.push(`/dashboard/endpoints/${result._id}`);
+    } catch (error) {
+      console.error("Failed to create endpoint:", error);
+    } finally {
+      setCreating(false);
+    }
+  };
 
   if (endpoints === undefined) {
     return (
@@ -38,10 +61,48 @@ export default function EndpointsPage() {
             Manage your webhook endpoints
           </p>
         </div>
-        <Button onClick={() => router.push("/dashboard")}>
-          Create endpoint
-        </Button>
+        {!showCreateForm && (
+          <Button onClick={() => setShowCreateForm(true)}>Create endpoint</Button>
+        )}
       </div>
+
+      {showCreateForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Create Endpoint</CardTitle>
+            <CardDescription>
+              Enter a name for your webhook endpoint
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleCreateEndpoint} className="flex gap-2">
+              <Input
+                type="text"
+                placeholder="My Webhook Endpoint"
+                value={endpointName}
+                onChange={(e) => setEndpointName(e.target.value)}
+                className="flex-1"
+                disabled={creating}
+                autoFocus
+              />
+              <Button type="submit" disabled={creating || !endpointName.trim()}>
+                {creating ? "Creating..." : "Create"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowCreateForm(false);
+                  setEndpointName("");
+                }}
+                disabled={creating}
+              >
+                Cancel
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       {endpoints.length === 0 ? (
         <Card>
@@ -49,9 +110,11 @@ export default function EndpointsPage() {
             <p className="text-muted-foreground mb-4">
               No endpoints yet. Create your first endpoint to get started.
             </p>
-            <Button onClick={() => router.push("/dashboard")}>
-              Create your first endpoint
-            </Button>
+            {!showCreateForm && (
+              <Button onClick={() => setShowCreateForm(true)}>
+                Create your first endpoint
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
