@@ -165,34 +165,59 @@ export class Polar<
         },
       });
       if (!customer.value) {
+        // Check if error is because customer already exists
+        const errorBody = customer.error && "body" in customer.error ? customer.error.body : null;
+        if (typeof errorBody === "string" && errorBody.includes("email address already exists")) {
+          console.log("[Polar:createCheckoutSession:customerAlreadyExists]", createSafeLog({ email }));
+          // Customer exists in Polar but not in our DB - we'll need to handle this in the caller
+          throw new Error("CUSTOMER_EXISTS_IN_POLAR");
+        }
         console.error("[Polar:createCheckoutSession:createCustomer:failure]", createSafeLog(customer));
         throw new Error("Customer not created");
       }
       console.log("[Polar:createCheckoutSession:createCustomer:success]", createSafeLog({ customer: customer.value }));
       return customer.value;
     };
+    
+    const getOrCreateCustomer = async () => {
+      try {
+        return await createCustomer();
+      } catch (error: any) {
+        // If customer already exists in Polar, we can't easily look it up
+        // So we'll return null and let the checkout fail, then handle it in the retry logic
+        if (error.message === "CUSTOMER_EXISTS_IN_POLAR") {
+          return null;
+        }
+        throw error;
+      }
+    };
     let customerId = dbCustomer?.id;
     let customerCreated = false;
     
-    // If no customer in DB, create one
+    // If no customer in DB, try to create one
     if (!customerId) {
-      const newCustomer = await createCustomer();
-      customerId = newCustomer.id;
-      customerCreated = true;
-      
-      // Use main app's API if available, otherwise fall back to component API
-      if (this.mainApi) {
-        await ctx.runMutation(this.mainApi.insertCustomer, {
-          id: customerId,
-          userId,
-        });
+      const newCustomer = await getOrCreateCustomer();
+      if (newCustomer) {
+        customerId = newCustomer.id;
+        customerCreated = true;
+        
+        // Use main app's API if available, otherwise fall back to component API
+        if (this.mainApi) {
+          await ctx.runMutation(this.mainApi.insertCustomer, {
+            id: customerId,
+            userId,
+          });
+        } else {
+          await ctx.runMutation(this.component.lib.insertCustomer, {
+            id: customerId,
+            userId,
+          });
+        }
+        console.log("[Polar:createCheckoutSession:insertCustomer]", createSafeLog({ customerId, userId }));
       } else {
-        await ctx.runMutation(this.component.lib.insertCustomer, {
-          id: customerId,
-          userId,
-        });
+        // Customer exists in Polar but we don't have the ID - skip for now, will handle in retry
+        console.log("[Polar:createCheckoutSession:customerExistsInPolarButNotInDB]", createSafeLog({ email }));
       }
-      console.log("[Polar:createCheckoutSession:insertCustomer]", createSafeLog({ customerId, userId }));
     }
     
     // Try to create checkout, if customer doesn't exist in Polar, create customer and retry
@@ -221,12 +246,28 @@ export class Polar<
           error: String(checkout.error)
         }));
         
-        // Create customer in Polar
-        const newCustomer = await createCustomer();
-        customerId = newCustomer.id;
+        // Try to create customer in Polar (or get existing one)
+        let newCustomer;
+        try {
+          newCustomer = await createCustomer();
+          customerId = newCustomer.id;
+        } catch (error: any) {
+          // If customer creation fails because email exists, we can't easily get the ID
+          // But we can try the checkout without a customerId - Polar might handle it
+          if (error.message === "CUSTOMER_EXISTS_IN_POLAR") {
+            console.log("[Polar:createCheckoutSession:customerExistsInPolar]", createSafeLog({
+              email,
+              message: "Customer exists in Polar but ID unknown. Will try checkout without customerId."
+            }));
+            // Set customerId to undefined/null - Polar might be able to match by email
+            customerId = undefined as any;
+          } else {
+            throw error;
+          }
+        }
         
-        // Update database if we had a stale customer record
-        if (dbCustomer) {
+        // Update database if we had a stale customer record and got a new customerId
+        if (dbCustomer && customerId) {
           // Update existing customer record with new ID, or insert if needed
           if (this.mainApi) {
             await ctx.runMutation(this.mainApi.upsertCustomer, {
@@ -246,8 +287,8 @@ export class Polar<
             newCustomerId: customerId, 
             userId 
           }));
-        } else if (!customerCreated) {
-          // Insert new customer record
+        } else if (!customerCreated && customerId) {
+          // Insert new customer record (only if we have a valid customerId)
           if (this.mainApi) {
             await ctx.runMutation(this.mainApi.insertCustomer, {
               id: customerId,
@@ -262,17 +303,23 @@ export class Polar<
           console.log("[Polar:createCheckoutSession:insertedCustomer]", createSafeLog({ customerId, userId }));
         }
         
-        // Retry checkout creation with new customer
-        checkout = await checkoutsCreate(this.polar, {
+        // Retry checkout creation with new customer (or without customerId if customer exists)
+        const retryCheckoutParams: any = {
           allowDiscountCodes: false,
-          customerId,
           subscriptionId,
           embedOrigin: origin,
           successUrl,
           ...(productIds.length === 1
             ? { products: productIds }
             : { products: productIds }),
-        });
+        };
+        
+        // Only include customerId if we have it
+        if (customerId) {
+          retryCheckoutParams.customerId = customerId;
+        }
+        
+        checkout = await checkoutsCreate(this.polar, retryCheckoutParams);
       }
     }
     
