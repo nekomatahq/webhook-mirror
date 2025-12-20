@@ -7,6 +7,7 @@ import schema from "./schema.js";
 import { asyncMap } from "convex-helpers";
 import { api, components } from "./_generated/api.js";
 import { convertToDatabaseProduct } from "./util";
+import { createSafeLog, redactObject } from "./utils/logging.js";
 
 export const getCustomerByUserId = query({
   args: {
@@ -301,27 +302,82 @@ export const syncProducts = action({
     server: v.union(v.literal("sandbox"), v.literal("production")),
   },
   handler: async (ctx, args) => {
-    const polar = new PolarCore({
-      accessToken: args.polarAccessToken,
+    const safeLog = createSafeLog({
       server: args.server,
+      polarAccessToken: args.polarAccessToken,
     });
-    let page = 1;
-    let maxPage;
-    do {
-      const products = await productsList(polar, {
-        page,
-        limit: 100,
+    console.log("[syncProducts] Starting product sync", safeLog);
+
+    try {
+      const polar = new PolarCore({
+        accessToken: args.polarAccessToken,
+        server: args.server,
       });
-      if (!products.value) {
-        throw new Error("Failed to get products");
-      }
-      page = page + 1;
-      maxPage = products.value.result.pagination.maxPage;
-      await ctx.runMutation(components.polar.lib.updateProducts, {
-        polarAccessToken: args.polarAccessToken,
-        products: products.value.result.items.map(convertToDatabaseProduct),
-      });
-    } while (maxPage >= page);
+      let page = 1;
+      let maxPage;
+      let totalProducts = 0;
+
+      do {
+        console.log("[syncProducts] Fetching products page", createSafeLog({ page, server: args.server }));
+        
+        const products = await productsList(polar, {
+          page,
+          limit: 100,
+        });
+        
+        if (!products.value) {
+          console.error("[syncProducts] Failed to get products", createSafeLog({ page, server: args.server }));
+          throw new Error("Failed to get products");
+        }
+
+        const productCount = products.value.result.items.length;
+        maxPage = products.value.result.pagination.maxPage;
+        totalProducts += productCount;
+
+        console.log("[syncProducts] Processing products page", createSafeLog({
+          page,
+          maxPage,
+          productCount,
+          totalProducts,
+          server: args.server,
+        }));
+
+        try {
+          await ctx.runMutation(components.polar.lib.updateProducts, {
+            polarAccessToken: args.polarAccessToken,
+            products: products.value.result.items.map(convertToDatabaseProduct),
+          });
+          console.log("[syncProducts] Successfully updated products for page", createSafeLog({
+            page,
+            productCount,
+            server: args.server,
+          }));
+        } catch (error) {
+          console.error("[syncProducts] Error updating products", createSafeLog({
+            page,
+            productCount,
+            server: args.server,
+            error: error instanceof Error ? error.message : String(error),
+          }));
+          throw error;
+        }
+
+        page = page + 1;
+      } while (maxPage >= page);
+
+      console.log("[syncProducts] Completed product sync", createSafeLog({
+        totalProducts,
+        totalPages: maxPage,
+        server: args.server,
+      }));
+    } catch (error) {
+      console.error("[syncProducts] Error during product sync", createSafeLog({
+        server: args.server,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      }));
+      throw error;
+    }
   },
 });
 
@@ -331,17 +387,70 @@ export const updateProducts = mutation({
     products: v.array(schema.tables.products.validator),
   },
   handler: async (ctx, args) => {
-    await asyncMap(args.products, async (product) => {
-      const existingProduct = await ctx.db
-        .query("products")
-        .withIndex("id", (q) => q.eq("id", product.id))
-        .unique();
-      if (existingProduct) {
-        await ctx.db.patch(existingProduct._id, product);
-        return;
-      }
-      await ctx.db.insert("products", product);
+    const safeLog = createSafeLog({
+      polarAccessToken: args.polarAccessToken,
+      productCount: args.products.length,
     });
+    console.log("[updateProducts] Starting product update", safeLog);
+
+    try {
+      let updatedCount = 0;
+      let createdCount = 0;
+      const errors: Array<{ productId: string; error: string }> = [];
+
+      await asyncMap(args.products, async (product) => {
+        try {
+          const existingProduct = await ctx.db
+            .query("products")
+            .withIndex("id", (q) => q.eq("id", product.id))
+            .unique();
+          
+          if (existingProduct) {
+            await ctx.db.patch(existingProduct._id, product);
+            updatedCount++;
+            console.log("[updateProducts] Updated product", createSafeLog({
+              productId: product.id,
+              productName: product.name,
+            }));
+          } else {
+            await ctx.db.insert("products", product);
+            createdCount++;
+            console.log("[updateProducts] Created product", createSafeLog({
+              productId: product.id,
+              productName: product.name,
+            }));
+          }
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          errors.push({ productId: product.id, error: errorMsg });
+          console.error("[updateProducts] Error processing product", createSafeLog({
+            productId: product.id,
+            productName: product.name,
+            error: errorMsg,
+          }));
+        }
+      });
+
+      console.log("[updateProducts] Completed product update", createSafeLog({
+        totalProducts: args.products.length,
+        updatedCount,
+        createdCount,
+        errorCount: errors.length,
+      }));
+
+      if (errors.length > 0) {
+        console.error("[updateProducts] Some products failed to update", createSafeLog({
+          errors: redactObject(errors),
+        }));
+      }
+    } catch (error) {
+      console.error("[updateProducts] Error during product update", createSafeLog({
+        productCount: args.products.length,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      }));
+      throw error;
+    }
   },
 });
 
