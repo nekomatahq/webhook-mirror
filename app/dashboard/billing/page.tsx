@@ -136,6 +136,7 @@ export default function BillingPage() {
                   <CheckoutLink
                     polarApi={api.polar}
                     productIds={productIds}
+                    embed={false}
                   >
                     <Button>Get full access</Button>
                   </CheckoutLink>
