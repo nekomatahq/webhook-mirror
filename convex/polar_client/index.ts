@@ -1,11 +1,13 @@
 import "./polyfill.js";
 import { PolarCore } from "@polar-sh/sdk/core.js";
 import { customersCreate } from "@polar-sh/sdk/funcs/customersCreate.js";
+import { customersList } from "@polar-sh/sdk/funcs/customersList.js";
 import { checkoutsCreate } from "@polar-sh/sdk/funcs/checkoutsCreate.js";
 import { customerSessionsCreate } from "@polar-sh/sdk/funcs/customerSessionsCreate.js";
 import { subscriptionsUpdate } from "@polar-sh/sdk/funcs/subscriptionsUpdate.js";
 
 import type { Checkout } from "@polar-sh/sdk/models/components/checkout.js";
+import type { Customer } from "@polar-sh/sdk/models/components/customer.js";
 import type { WebhookProductCreatedPayload } from "@polar-sh/sdk/models/components/webhookproductcreatedpayload.js";
 import type { WebhookProductUpdatedPayload } from "@polar-sh/sdk/models/components/webhookproductupdatedpayload.js";
 import type { WebhookSubscriptionCreatedPayload } from "@polar-sh/sdk/models/components/webhooksubscriptioncreatedpayload.js";
@@ -104,6 +106,174 @@ export class Polar<
       products: this.products,
     }));
   }
+
+  // ============================================================================
+  // Private helper methods for customer management
+  // ============================================================================
+
+  /**
+   * Query local database for a customer by userId.
+   */
+  private async queryCustomerByUserId(
+    ctx: RunQueryCtx,
+    userId: string
+  ): Promise<{ id: string; userId: string; metadata?: Record<string, any> } | null> {
+    console.log("[Polar:queryCustomerByUserId]", { userId: redactUserId(userId) });
+    if (this.mainApi) {
+      return ctx.runQuery(this.mainApi.getCustomerByUserId, { userId });
+    }
+    return ctx.runQuery(this.component.lib.getCustomerByUserId, { userId });
+  }
+
+  /**
+   * Insert a new customer into the local database.
+   */
+  private async insertCustomerToDb(
+    ctx: RunMutationCtx,
+    customer: { id: string; userId: string; metadata?: Record<string, any> }
+  ): Promise<void> {
+    console.log("[Polar:insertCustomerToDb]", { 
+      customerId: customer.id, 
+      userId: redactUserId(customer.userId) 
+    });
+    if (this.mainApi) {
+      await ctx.runMutation(this.mainApi.insertCustomer, {
+        id: customer.id,
+        userId: customer.userId,
+        metadata: customer.metadata,
+      });
+    } else {
+      await ctx.runMutation(this.component.lib.insertCustomer, {
+        id: customer.id,
+        userId: customer.userId,
+        metadata: customer.metadata,
+      });
+    }
+  }
+
+  /**
+   * Find an existing customer in Polar by their email address.
+   * Uses the customersList API with exact email filter.
+   */
+  private async findPolarCustomerByEmail(email: string): Promise<Customer | null> {
+    console.log("[Polar:findPolarCustomerByEmail]", { email: redactEmail(email) });
+    
+    const result = await customersList(this.polar, { email, limit: 1 });
+    
+    // Handle pagination iterator - get first page
+    const firstPage = await result;
+    if (!firstPage.value) {
+      console.log("[Polar:findPolarCustomerByEmail:error]", createSafeLog(firstPage));
+      return null;
+    }
+    
+    const customers = firstPage.value.result.items;
+    if (customers.length === 0) {
+      console.log("[Polar:findPolarCustomerByEmail:notFound]", { email: redactEmail(email) });
+      return null;
+    }
+    
+    const customer = customers[0];
+    console.log("[Polar:findPolarCustomerByEmail:found]", { 
+      customerId: customer.id, 
+      email: redactEmail(customer.email) 
+    });
+    return customer;
+  }
+
+  /**
+   * Create a new customer in Polar.
+   */
+  private async createPolarCustomer(data: { 
+    email: string; 
+    userId: string 
+  }): Promise<Customer> {
+    console.log("[Polar:createPolarCustomer]", { 
+      email: redactEmail(data.email), 
+      userId: redactUserId(data.userId) 
+    });
+    
+    const result = await customersCreate(this.polar, {
+      customerCreate: {
+        email: data.email,
+        metadata: {
+          userId: data.userId,
+        },
+      },
+    });
+    
+    if (!result.value) {
+      console.error("[Polar:createPolarCustomer:failure]", createSafeLog(result));
+      throw new Error("Failed to create customer in Polar");
+    }
+    
+    console.log("[Polar:createPolarCustomer:success]", { 
+      customerId: result.value.id 
+    });
+    return result.value;
+  }
+
+  /**
+   * Get or create a Polar customer, ensuring the local DB is in sync.
+   * 
+   * Flow:
+   * 1. Check if customer exists in local DB by userId
+   * 2. If not, search Polar by email to find existing customer
+   * 3. If found in Polar, sync to local DB
+   * 4. If not found anywhere, create new customer in Polar and sync to local DB
+   */
+  private async getOrCreatePolarCustomer(
+    ctx: RunMutationCtx,
+    { userId, email }: { userId: string; email: string }
+  ): Promise<{ customerId: string; wasCreated: boolean }> {
+    console.log("[Polar:getOrCreatePolarCustomer:start]", { 
+      userId: redactUserId(userId), 
+      email: redactEmail(email) 
+    });
+
+    // Step 1: Check local DB first
+    const dbCustomer = await this.queryCustomerByUserId(ctx, userId);
+    if (dbCustomer) {
+      console.log("[Polar:getOrCreatePolarCustomer:foundInDb]", { 
+        customerId: dbCustomer.id 
+      });
+      return { customerId: dbCustomer.id, wasCreated: false };
+    }
+
+    // Step 2: Search Polar by exact email
+    const existingPolarCustomer = await this.findPolarCustomerByEmail(email);
+    if (existingPolarCustomer) {
+      // Sync to local DB
+      console.log("[Polar:getOrCreatePolarCustomer:foundInPolar]", { 
+        customerId: existingPolarCustomer.id 
+      });
+      await this.insertCustomerToDb(ctx, { 
+        id: existingPolarCustomer.id, 
+        userId,
+        metadata: existingPolarCustomer.metadata as Record<string, any>,
+      });
+      return { customerId: existingPolarCustomer.id, wasCreated: false };
+    }
+
+    // Step 3: Create new customer in Polar
+    console.log("[Polar:getOrCreatePolarCustomer:creating]");
+    const newCustomer = await this.createPolarCustomer({ email, userId });
+    await this.insertCustomerToDb(ctx, { 
+      id: newCustomer.id, 
+      userId,
+      metadata: newCustomer.metadata as Record<string, any>,
+    });
+    
+    console.log("[Polar:getOrCreatePolarCustomer:created]", { 
+      customerId: newCustomer.id 
+    });
+    return { customerId: newCustomer.id, wasCreated: true };
+  }
+
+  // ============================================================================
+  // Public methods
+  // ============================================================================
+
   getCustomerByUserId(ctx: RunQueryCtx, userId: string) {
     console.log("[Polar:getCustomerByUserId]", { userId: redactUserId(userId) });
     // Use main app's API if available, otherwise fall back to component API
@@ -130,6 +300,14 @@ export class Polar<
       });
     }
   }
+  /**
+   * Create a checkout session for a user.
+   * 
+   * This method ensures:
+   * 1. The customer exists in Polar (creating or finding by email if needed)
+   * 2. The local DB is in sync with Polar
+   * 3. Email is immutable (embedded via customerId, not passed directly)
+   */
   async createCheckoutSession(
     ctx: RunMutationCtx,
     {
@@ -149,251 +327,41 @@ export class Polar<
     },
   ): Promise<Checkout> {
     console.log("[Polar:createCheckoutSession:start]", createSafeLog({
-      userId, email, productIds, origin, successUrl, subscriptionId,
+      userId: redactUserId(userId), 
+      email: redactEmail(email), 
+      productIds, 
+      origin, 
+      successUrl, 
+      subscriptionId,
     }));
     
-    // Email is required for checkout creation
-    if (!email || !email.trim()) {
+    // Validate email is provided
+    if (!email?.trim()) {
       throw new Error("Email is required for checkout creation");
     }
-    
-    // Use main app's API if available, otherwise fall back to component API
-    const dbCustomer = this.mainApi
-      ? await ctx.runQuery(this.mainApi.getCustomerByUserId, { userId })
-      : await ctx.runQuery(this.component.lib.getCustomerByUserId, { userId });
-    const createCustomer = async () => {
-      const customer = await customersCreate(this.polar, {
-        customerCreate: {
-          email,
-          metadata: {
-            userId,
-          },
-        },
-      });
-      if (!customer.value) {
-        // Check if error is because customer already exists
-        const errorBody = customer.error && "body" in customer.error ? customer.error.body : null;
-        if (typeof errorBody === "string" && errorBody.includes("email address already exists")) {
-          console.log("[Polar:createCheckoutSession:customerAlreadyExists]", createSafeLog({ email }));
-          // Customer exists in Polar but not in our DB - we'll need to handle this in the caller
-          throw new Error("CUSTOMER_EXISTS_IN_POLAR");
-        }
-        console.error("[Polar:createCheckoutSession:createCustomer:failure]", createSafeLog(customer));
-        throw new Error("Customer not created");
-      }
-      console.log("[Polar:createCheckoutSession:createCustomer:success]", createSafeLog({ customer: customer.value }));
-      return customer.value;
-    };
-    
-    const getOrCreateCustomer = async () => {
-      try {
-        return await createCustomer();
-      } catch (error: any) {
-        // If customer already exists in Polar, we can't easily look it up
-        // So we'll return null and let the checkout fail, then handle it in the retry logic
-        if (error.message === "CUSTOMER_EXISTS_IN_POLAR") {
-          return null;
-        }
-        throw error;
-      }
-    };
-    let customerId = dbCustomer?.id;
-    let customerCreated = false;
-    
-    // If no customer in DB, try to create one
-    if (!customerId) {
-      const newCustomer = await getOrCreateCustomer();
-      if (newCustomer) {
-        customerId = newCustomer.id;
-        customerCreated = true;
-        
-        // Use main app's API if available, otherwise fall back to component API
-        if (this.mainApi) {
-          await ctx.runMutation(this.mainApi.insertCustomer, {
-            id: customerId,
-            userId,
-          });
-        } else {
-          await ctx.runMutation(this.component.lib.insertCustomer, {
-            id: customerId,
-            userId,
-          });
-        }
-        console.log("[Polar:createCheckoutSession:insertCustomer]", createSafeLog({ customerId, userId }));
-      } else {
-        // Customer exists in Polar but we don't have the ID - skip for now, will handle in retry
-        console.log("[Polar:createCheckoutSession:customerExistsInPolarButNotInDB]", createSafeLog({ email }));
-      }
-    }
-    
-    // Ensure we have a customer with email before creating checkout
-    // Email must be embedded via customer - fail if we can't ensure this
-    if (!customerId) {
-      // Try to create customer to ensure email is embedded
-      try {
-        const newCustomer = await createCustomer();
-        customerId = newCustomer.id;
-        
-        // Save to database
-        if (this.mainApi) {
-          await ctx.runMutation(this.mainApi.insertCustomer, {
-            id: customerId,
-            userId,
-          });
-        } else {
-          await ctx.runMutation(this.component.lib.insertCustomer, {
-            id: customerId,
-            userId,
-          });
-        }
-        console.log("[Polar:createCheckoutSession:createdCustomerForCheckout]", createSafeLog({ customerId, userId, email }));
-      } catch (error: any) {
-        if (error.message === "CUSTOMER_EXISTS_IN_POLAR") {
-          // Customer exists in Polar but we don't have the ID - cannot proceed
-          console.error("[Polar:createCheckoutSession:cannotEmbedEmail]", createSafeLog({
-            email,
-            error: "Customer exists in Polar but ID is unknown. Cannot embed email in checkout."
-          }));
-          throw new Error("Cannot create checkout: Customer exists in Polar but cannot be resolved. Please contact support.");
-        }
-        throw error;
-      }
-    }
-    
-    // Try to create checkout - email is embedded via customerId
-    let checkout = await checkoutsCreate(this.polar, {
+
+    // Get or create customer (handles all edge cases: in DB, in Polar, or new)
+    const { customerId } = await this.getOrCreatePolarCustomer(ctx, { userId, email });
+
+    // Create checkout with customerId - email is immutable via customer record
+    const checkout = await checkoutsCreate(this.polar, {
       allowDiscountCodes: false,
       customerId,
       subscriptionId,
       embedOrigin: origin,
       successUrl,
-      ...(productIds.length === 1
-        ? { products: productIds }
-        : { products: productIds }),
+      products: productIds,
     });
-    
-    // If checkout failed because customer doesn't exist, create customer and retry
-    if (!checkout.value && checkout.error) {
-      const errorBody = "body" in checkout.error ? checkout.error.body : null;
-      const statusCode = "statusCode" in checkout.error ? checkout.error.statusCode : null;
-      const isCustomerNotFound = 
-        (typeof errorBody === "string" && errorBody.includes("Customer does not exist")) ||
-        statusCode === 422;
-      
-      if (isCustomerNotFound) {
-        console.log("[Polar:createCheckoutSession:customerNotFoundInPolar]", createSafeLog({ 
-          customerId, 
-          error: String(checkout.error)
-        }));
-        
-        // Try to create customer in Polar (or get existing one)
-        let newCustomer;
-        try {
-          newCustomer = await createCustomer();
-          customerId = newCustomer.id;
-        } catch (error: any) {
-          // If customer creation fails because email exists, we can't easily get the ID
-          // But we can try the checkout without a customerId - Polar might handle it
-          if (error.message === "CUSTOMER_EXISTS_IN_POLAR") {
-            console.log("[Polar:createCheckoutSession:customerExistsInPolar]", createSafeLog({
-              email,
-              message: "Customer exists in Polar but ID unknown. Will try checkout without customerId."
-            }));
-            // Set customerId to undefined/null - Polar might be able to match by email
-            customerId = undefined as any;
-          } else {
-            throw error;
-          }
-        }
-        
-        // Update database if we had a stale customer record and got a new customerId
-        if (dbCustomer && customerId) {
-          // Update existing customer record with new ID, or insert if needed
-          if (this.mainApi) {
-            await ctx.runMutation(this.mainApi.upsertCustomer, {
-              id: customerId,
-              userId,
-              metadata: {},
-            });
-          } else {
-            await ctx.runMutation(this.component.lib.upsertCustomer, {
-              id: customerId,
-              userId,
-              metadata: {},
-            });
-          }
-          console.log("[Polar:createCheckoutSession:updatedCustomer]", createSafeLog({ 
-            oldCustomerId: dbCustomer.id, 
-            newCustomerId: customerId, 
-            userId 
-          }));
-        } else if (!customerCreated && customerId) {
-          // Insert new customer record (only if we have a valid customerId)
-          if (this.mainApi) {
-            await ctx.runMutation(this.mainApi.insertCustomer, {
-              id: customerId,
-              userId,
-            });
-          } else {
-            await ctx.runMutation(this.component.lib.insertCustomer, {
-              id: customerId,
-              userId,
-            });
-          }
-          console.log("[Polar:createCheckoutSession:insertedCustomer]", createSafeLog({ customerId, userId }));
-        }
-        
-        // Retry checkout creation - ensure we have customerId with email embedded
-        if (!customerId) {
-          // Try to create customer to ensure email is embedded
-          try {
-            const newCustomer = await createCustomer();
-            customerId = newCustomer.id;
-            
-            // Save to database
-            if (this.mainApi) {
-              await ctx.runMutation(this.mainApi.insertCustomer, {
-                id: customerId,
-                userId,
-              });
-            } else {
-              await ctx.runMutation(this.component.lib.insertCustomer, {
-                id: customerId,
-                userId,
-              });
-            }
-            console.log("[Polar:createCheckoutSession:createdCustomerForRetry]", createSafeLog({ customerId, userId, email }));
-          } catch (error: any) {
-            if (error.message === "CUSTOMER_EXISTS_IN_POLAR") {
-              console.error("[Polar:createCheckoutSession:cannotEmbedEmailOnRetry]", createSafeLog({
-                email,
-                error: "Customer exists in Polar but ID is unknown. Cannot embed email in checkout."
-              }));
-              throw new Error("Cannot create checkout: Customer exists in Polar but cannot be resolved. Please contact support.");
-            }
-            throw error;
-          }
-        }
-        
-        // Retry checkout creation with customerId (email embedded via customer)
-        checkout = await checkoutsCreate(this.polar, {
-          allowDiscountCodes: false,
-          customerId,
-          subscriptionId,
-          embedOrigin: origin,
-          successUrl,
-          ...(productIds.length === 1
-            ? { products: productIds }
-            : { products: productIds }),
-        });
-      }
-    }
-    
+
     if (!checkout.value) {
-      console.error("[Polar:createCheckoutSession:checkoutCreate:failure]", createSafeLog(checkout));
+      console.error("[Polar:createCheckoutSession:failure]", createSafeLog(checkout));
       throw new Error("Checkout not created");
     }
-    console.log("[Polar:createCheckoutSession:success]", createSafeLog({ url: checkout.value.url, customerId: redactUserId(customerId) }));
+
+    console.log("[Polar:createCheckoutSession:success]", { 
+      url: checkout.value.url, 
+      customerId 
+    });
     return checkout.value;
   }
   async createCustomerPortalSession(
