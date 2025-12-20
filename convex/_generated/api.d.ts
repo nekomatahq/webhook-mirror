@@ -9,13 +9,13 @@
  */
 
 import type * as auth from "../auth.js";
-import type * as client_index from "../polar_client/index.js";
-import type * as client_polyfill from "../polar_client/polyfill.js";
 import type * as endpoints_mutation from "../endpoints/mutation.js";
 import type * as endpoints_query from "../endpoints/query.js";
 import type * as http from "../http.js";
 import type * as model_users from "../model/users.js";
 import type * as polar from "../polar.js";
+import type * as polar_client_index from "../polar_client/index.js";
+import type * as polar_client_polyfill from "../polar_client/polyfill.js";
 import type * as polar_ops from "../polar_ops.js";
 import type * as requests_action from "../requests/action.js";
 import type * as requests_mutation from "../requests/mutation.js";
@@ -33,13 +33,13 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
-  "client/index": typeof client_index;
-  "client/polyfill": typeof client_polyfill;
   "endpoints/mutation": typeof endpoints_mutation;
   "endpoints/query": typeof endpoints_query;
   http: typeof http;
   "model/users": typeof model_users;
   polar: typeof polar;
+  "polar_client/index": typeof polar_client_index;
+  "polar_client/polyfill": typeof polar_client_polyfill;
   polar_ops: typeof polar_ops;
   "requests/action": typeof requests_action;
   "requests/mutation": typeof requests_mutation;
