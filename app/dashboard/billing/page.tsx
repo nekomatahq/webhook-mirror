@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { CheckoutLink, CustomerPortalLink } from "@convex-dev/polar/react";
@@ -10,8 +12,46 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle } from "lucide-react";
 
 export default function BillingPage() {
+  const router = useRouter();
+  const user = useQuery(api.users.query.getMe);
   const subscriptionStatus = useQuery(api.subscription.query.getSubscriptionStatus);
   const products = useQuery(api.polar.getConfiguredProducts);
+
+  // Ensure user is authenticated before accessing billing
+  useEffect(() => {
+    if (user === null) {
+      router.push("/signin");
+    }
+  }, [user, router]);
+
+  // Show loading while checking authentication
+  if (user === undefined || subscriptionStatus === undefined || products === undefined) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold">Billing</h1>
+          <p className="text-muted-foreground">
+            Manage your subscription and billing settings
+          </p>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <Skeleton className="h-8 w-64 mb-4" />
+            <Skeleton className="h-4 w-96" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Redirect if not authenticated
+  if (user === null) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-muted-foreground">Redirecting to sign in...</div>
+      </div>
+    );
+  }
 
   if (subscriptionStatus === undefined || products === undefined) {
     return (

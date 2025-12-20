@@ -23,9 +23,11 @@ export default function DashboardLayout({
   useEffect(() => {
     if (user === null) {
       router.push("/signin");
+      return;
     }
   }, [user, router]);
 
+  // Show loading while checking authentication
   if (user === undefined || subscriptionStatus === undefined) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -34,8 +36,13 @@ export default function DashboardLayout({
     );
   }
 
+  // Redirect if not authenticated - this should be caught by useEffect but adding as safety
   if (user === null) {
-    return null;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-muted-foreground">Redirecting to sign in...</div>
+      </div>
+    );
   }
 
   // Allow access to billing page even without subscription
