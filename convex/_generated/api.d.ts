@@ -9,10 +9,16 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as endpoints_mutation from "../endpoints/mutation.js";
+import type * as endpoints_query from "../endpoints/query.js";
 import type * as http from "../http.js";
 import type * as model_users from "../model/users.js";
 import type * as myFunctions from "../myFunctions.js";
 import type * as polar from "../polar.js";
+import type * as requests_action from "../requests/action.js";
+import type * as requests_mutation from "../requests/mutation.js";
+import type * as requests_query from "../requests/query.js";
+import type * as subscription_query from "../subscription/query.js";
 import type * as users_query from "../users/query.js";
 
 import type {
@@ -23,10 +29,16 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  "endpoints/mutation": typeof endpoints_mutation;
+  "endpoints/query": typeof endpoints_query;
   http: typeof http;
   "model/users": typeof model_users;
   myFunctions: typeof myFunctions;
   polar: typeof polar;
+  "requests/action": typeof requests_action;
+  "requests/mutation": typeof requests_mutation;
+  "requests/query": typeof requests_query;
+  "subscription/query": typeof subscription_query;
   "users/query": typeof users_query;
 }>;
 

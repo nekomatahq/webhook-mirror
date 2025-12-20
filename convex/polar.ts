@@ -1,7 +1,8 @@
 import { Polar } from "@convex-dev/polar";
 import { api, components } from "./_generated/api";
 import { getCurrentUser } from "./model/users";
-import { action } from "./_generated/server";
+import { action, internalQuery } from "./_generated/server";
+import { v } from "convex/values";
 
 export const polar = new Polar(components.polar, {
   // Required: provide a function the component can use to get the current user's ID and
@@ -37,3 +38,15 @@ export const {
   generateCheckoutLink,
   generateCustomerPortalUrl,
 } = polar.api();
+
+// Internal query to get current subscription for a user
+export const getCurrentSubscription = internalQuery({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    return await polar.getCurrentSubscription(ctx, {
+      userId: args.userId,
+    });
+  },
+});
