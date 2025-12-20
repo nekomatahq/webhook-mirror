@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { CheckoutLink, CustomerPortalLink } from "@convex-dev/polar/react";
+import { CheckoutLink, CustomerPortalLink } from "@/components/polar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";

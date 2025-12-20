@@ -2,10 +2,10 @@ import { PolarCore } from "@polar-sh/sdk/core.js";
 import { productsList } from "@polar-sh/sdk/funcs/productsList.js";
 
 import { v } from "convex/values";
-import { action, mutation, query } from "./_generated/server.js";
+import { action, internalMutation, mutation, query } from "./_generated/server.js";
 import schema from "./schema.js";
 import { asyncMap } from "convex-helpers";
-import { api, components } from "./_generated/api.js";
+import { api, components, internal } from "./_generated/api.js";
 import { convertToDatabaseProduct } from "./util";
 import { createSafeLog, redactObject } from "./utils/logging.js";
 
@@ -210,6 +210,7 @@ export const createSubscription = mutation({
   args: {
     subscription: schema.tables.subscriptions.validator,
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const existingSubscription = await ctx.db
       .query("subscriptions")
@@ -229,6 +230,7 @@ export const updateSubscription = mutation({
   args: {
     subscription: schema.tables.subscriptions.validator,
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const existingSubscription = await ctx.db
       .query("subscriptions")
@@ -248,6 +250,7 @@ export const createProduct = mutation({
   args: {
     product: schema.tables.products.validator,
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const existingProduct = await ctx.db
       .query("products")
@@ -267,6 +270,7 @@ export const updateProduct = mutation({
   args: {
     product: schema.tables.products.validator,
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const existingProduct = await ctx.db
       .query("products")
@@ -301,6 +305,7 @@ export const syncProducts = action({
     polarAccessToken: v.string(),
     server: v.union(v.literal("sandbox"), v.literal("production")),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const safeLog = createSafeLog({
       server: args.server,
@@ -343,7 +348,7 @@ export const syncProducts = action({
         }));
 
         try {
-          await ctx.runMutation(components.polar.lib.updateProducts, {
+          await ctx.runMutation(internal.polar_ops.updateProducts, {
             polarAccessToken: args.polarAccessToken,
             products: products.value.result.items.map(convertToDatabaseProduct),
           });
@@ -381,11 +386,12 @@ export const syncProducts = action({
   },
 });
 
-export const updateProducts = mutation({
+export const updateProducts = internalMutation({
   args: {
     polarAccessToken: v.string(),
     products: v.array(schema.tables.products.validator),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const safeLog = createSafeLog({
       polarAccessToken: args.polarAccessToken,

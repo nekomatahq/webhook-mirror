@@ -130,7 +130,7 @@ export declare const components: {
             recurringInterval?: "day" | "week" | "month" | "year" | null;
           };
         },
-        any
+        null
       >;
       createSubscription: FunctionReference<
         "mutation",
@@ -158,7 +158,7 @@ export declare const components: {
             status: string;
           };
         },
-        any
+        null
       >;
       getCurrentSubscription: FunctionReference<
         "query",
@@ -475,7 +475,7 @@ export declare const components: {
         "action",
         "internal",
         { polarAccessToken: string; server: "sandbox" | "production" },
-        any
+        null
       >;
       updateProduct: FunctionReference<
         "mutation",
@@ -528,61 +528,7 @@ export declare const components: {
             recurringInterval?: "day" | "week" | "month" | "year" | null;
           };
         },
-        any
-      >;
-      updateProducts: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          polarAccessToken: string;
-          products: Array<{
-            createdAt: string;
-            description: string | null;
-            id: string;
-            isArchived: boolean;
-            isRecurring: boolean;
-            medias: Array<{
-              checksumEtag: string | null;
-              checksumSha256Base64: string | null;
-              checksumSha256Hex: string | null;
-              createdAt: string;
-              id: string;
-              isUploaded: boolean;
-              lastModifiedAt: string | null;
-              mimeType: string;
-              name: string;
-              organizationId: string;
-              path: string;
-              publicUrl: string;
-              service?: string;
-              size: number;
-              sizeReadable: string;
-              storageVersion: string | null;
-              version: string | null;
-            }>;
-            metadata?: Record<string, any>;
-            modifiedAt: string | null;
-            name: string;
-            organizationId: string;
-            prices: Array<{
-              amountType?: string;
-              createdAt: string;
-              id: string;
-              isArchived: boolean;
-              maximumAmount?: number | null;
-              minimumAmount?: number | null;
-              modifiedAt: string | null;
-              presetAmount?: number | null;
-              priceAmount?: number;
-              priceCurrency?: string;
-              productId: string;
-              recurringInterval?: "day" | "week" | "month" | "year" | null;
-              type?: string;
-            }>;
-            recurringInterval?: "day" | "week" | "month" | "year" | null;
-          }>;
-        },
-        any
+        null
       >;
       updateSubscription: FunctionReference<
         "mutation",
@@ -610,7 +556,7 @@ export declare const components: {
             status: string;
           };
         },
-        any
+        null
       >;
       upsertCustomer: FunctionReference<
         "mutation",

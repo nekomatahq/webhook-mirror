@@ -75,7 +75,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             recurringInterval?: "day" | "week" | "month" | "year" | null;
           };
         },
-        any,
+        null,
         Name
       >;
       createSubscription: FunctionReference<
@@ -104,7 +104,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             status: string;
           };
         },
-        any,
+        null,
         Name
       >;
       getCurrentSubscription: FunctionReference<
@@ -430,7 +430,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "action",
         "internal",
         { polarAccessToken: string; server: "sandbox" | "production" },
-        any,
+        null,
         Name
       >;
       updateProduct: FunctionReference<
@@ -484,62 +484,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             recurringInterval?: "day" | "week" | "month" | "year" | null;
           };
         },
-        any,
-        Name
-      >;
-      updateProducts: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          polarAccessToken: string;
-          products: Array<{
-            createdAt: string;
-            description: string | null;
-            id: string;
-            isArchived: boolean;
-            isRecurring: boolean;
-            medias: Array<{
-              checksumEtag: string | null;
-              checksumSha256Base64: string | null;
-              checksumSha256Hex: string | null;
-              createdAt: string;
-              id: string;
-              isUploaded: boolean;
-              lastModifiedAt: string | null;
-              mimeType: string;
-              name: string;
-              organizationId: string;
-              path: string;
-              publicUrl: string;
-              service?: string;
-              size: number;
-              sizeReadable: string;
-              storageVersion: string | null;
-              version: string | null;
-            }>;
-            metadata?: Record<string, any>;
-            modifiedAt: string | null;
-            name: string;
-            organizationId: string;
-            prices: Array<{
-              amountType?: string;
-              createdAt: string;
-              id: string;
-              isArchived: boolean;
-              maximumAmount?: number | null;
-              minimumAmount?: number | null;
-              modifiedAt: string | null;
-              presetAmount?: number | null;
-              priceAmount?: number;
-              priceCurrency?: string;
-              productId: string;
-              recurringInterval?: "day" | "week" | "month" | "year" | null;
-              type?: string;
-            }>;
-            recurringInterval?: "day" | "week" | "month" | "year" | null;
-          }>;
-        },
-        any,
+        null,
         Name
       >;
       updateSubscription: FunctionReference<
@@ -568,7 +513,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             status: string;
           };
         },
-        any,
+        null,
         Name
       >;
       upsertCustomer: FunctionReference<
