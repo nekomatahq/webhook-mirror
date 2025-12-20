@@ -14,8 +14,16 @@ interface ReplayFormProps {
 
 // Helper function to strip stack trace and debug information from error messages
 function cleanErrorMessage(error: string): string {
+  let cleaned = error;
+  
+  // Remove Convex debug prefixes
+  cleaned = cleaned.replace(/\[CONVEX [^\]]+\]\s*/g, "");
+  cleaned = cleaned.replace(/\[Request ID: [^\]]+\]\s*/g, "");
+  cleaned = cleaned.replace(/Server Error\s*/g, "");
+  cleaned = cleaned.replace(/Uncaught ConvexError:\s*/g, "");
+  
   // Split by newlines and filter out stack trace lines
-  const lines = error.split("\n");
+  const lines = cleaned.split("\n");
   const cleanLines: string[] = [];
   
   for (const line of lines) {
@@ -104,7 +112,11 @@ export const ReplayForm = ({ requestId }: ReplayFormProps) => {
       // Extract error message from ConvexError and clean stack traces
       let errorMessage = "Unknown error occurred";
       if (error instanceof Error) {
-        errorMessage = cleanErrorMessage(error.message);
+        // Try message first, fallback to toString() if message is empty or doesn't contain the actual error
+        const rawMessage = error.message || error.toString();
+        errorMessage = cleanErrorMessage(rawMessage);
+      } else if (typeof error === "string") {
+        errorMessage = cleanErrorMessage(error);
       }
 
       setResult({
