@@ -1,6 +1,6 @@
 import { Polar } from "./polar_client";
 import { api, components } from "./_generated/api";
-import { action, internalQuery } from "./_generated/server";
+import { internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { redactEmail, redactUserId } from "./utils/logging";
 
@@ -34,22 +34,6 @@ export const polar = new Polar(components.polar, {
         });
 
         return userInfo;
-    },
-});
-
-export const syncProducts = action({
-    args: {},
-    handler: async (ctx) => {
-        console.log("[POLAR] syncProducts - starting");
-        try {
-            await polar.syncProducts(ctx);
-            console.log("[POLAR] syncProducts - completed successfully");
-        } catch (error) {
-            console.error("[POLAR] syncProducts - error", {
-                error: error instanceof Error ? error.message : "Unknown error",
-            });
-            throw error;
-        }
     },
 });
 

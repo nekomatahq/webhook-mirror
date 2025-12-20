@@ -51,11 +51,9 @@ export const listRequests = query({
       throw new Error("Unauthorized");
     }
 
-    const requests = await ctx.db
-      .query("requests")
-      .withIndex("by_endpoint", (q) => q.eq("endpointId", args.endpointId))
-      .order("desc")
-      .collect();
+    const allRequests = await ctx.db.query("requests").collect();
+    const filtered = allRequests.filter((r) => r.endpointId === args.endpointId);
+    const requests = filtered.sort((a, b) => b._creationTime - a._creationTime);
 
     console.log("[REQUESTS] listRequests - result", {
       endpointId: args.endpointId,

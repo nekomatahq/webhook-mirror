@@ -27,11 +27,9 @@ export const listEndpoints = query({
       userId: redactUserId(userId),
     });
 
-    const endpoints = await ctx.db
-      .query("endpoints")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .order("desc")
-      .collect();
+    const allEndpoints = await ctx.db.query("endpoints").collect();
+    const filtered = allEndpoints.filter((e) => e.userId === userId);
+    const endpoints = filtered.sort((a, b) => b._creationTime - a._creationTime);
 
     console.log("[ENDPOINTS] listEndpoints - result", {
       userId: redactUserId(userId),
@@ -120,10 +118,8 @@ export const getEndpointBySlug = query({
       slug: args.slug,
     });
 
-    const endpoint = await ctx.db
-      .query("endpoints")
-      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
-      .first();
+    const endpoints = await ctx.db.query("endpoints").collect();
+    const endpoint = endpoints.find((e) => e.slug === args.slug);
 
     if (endpoint) {
       console.log("[ENDPOINTS] getEndpointBySlug - found", {

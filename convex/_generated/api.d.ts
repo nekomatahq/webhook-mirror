@@ -9,6 +9,13 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as db_customers from "../db/customers.js";
+import type * as db_endpoints from "../db/endpoints.js";
+import type * as db_numbers from "../db/numbers.js";
+import type * as db_products from "../db/products.js";
+import type * as db_requests from "../db/requests.js";
+import type * as db_subscriptions from "../db/subscriptions.js";
+import type * as db_types from "../db/types.js";
 import type * as endpoints_mutation from "../endpoints/mutation.js";
 import type * as endpoints_query from "../endpoints/query.js";
 import type * as http from "../http.js";
@@ -33,6 +40,13 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  "db/customers": typeof db_customers;
+  "db/endpoints": typeof db_endpoints;
+  "db/numbers": typeof db_numbers;
+  "db/products": typeof db_products;
+  "db/requests": typeof db_requests;
+  "db/subscriptions": typeof db_subscriptions;
+  "db/types": typeof db_types;
   "endpoints/mutation": typeof endpoints_mutation;
   "endpoints/query": typeof endpoints_query;
   http: typeof http;

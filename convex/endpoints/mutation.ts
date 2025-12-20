@@ -35,10 +35,8 @@ export const createEndpoint = mutation({
     let exists = true;
     while (exists) {
       slug = generateSlug();
-      const existing = await ctx.db
-        .query("endpoints")
-        .withIndex("by_slug", (q) => q.eq("slug", slug))
-        .first();
+      const endpoints = await ctx.db.query("endpoints").collect();
+      const existing = endpoints.find((e) => e.slug === slug);
       exists = existing !== null;
     }
 
@@ -165,10 +163,8 @@ export const deleteEndpoint = mutation({
       throw new Error("Unauthorized");
     }
 
-    const requests = await ctx.db
-      .query("requests")
-      .withIndex("by_endpoint", (q) => q.eq("endpointId", args.id))
-      .collect();
+    const allRequests = await ctx.db.query("requests").collect();
+    const requests = allRequests.filter((r) => r.endpointId === args.id);
 
     console.log("[ENDPOINTS] deleteEndpoint - deleting requests", {
       endpointId: args.id,

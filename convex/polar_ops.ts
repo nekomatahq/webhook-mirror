@@ -15,11 +15,9 @@ export const getCustomerByUserId = query({
   },
   returns: v.union(schema.tables.customers.validator, v.null()),
   handler: async (ctx, args) => {
-    const customer = await ctx.db
-      .query("customers")
-      .withIndex("userId", (q) => q.eq("userId", args.userId))
-      .unique();
-    return omitSystemFields(customer);
+    const customers = await ctx.db.query("customers").collect();
+    const customer = customers.find((c) => c.userId === args.userId);
+    return omitSystemFields(customer ?? null);
   },
 });
 
@@ -27,10 +25,8 @@ export const insertCustomer = mutation({
   args: schema.tables.customers.validator,
   returns: v.id("customers"),
   handler: async (ctx, args) => {
-    const existingCustomer = await ctx.db
-      .query("customers")
-      .withIndex("userId", (q) => q.eq("userId", args.userId))
-      .unique();
+    const customers = await ctx.db.query("customers").collect();
+    const existingCustomer = customers.find((c) => c.userId === args.userId);
     if (existingCustomer) {
       throw new Error(`Customer already exists for user: ${args.userId}`);
     }
@@ -46,10 +42,8 @@ export const upsertCustomer = mutation({
   args: schema.tables.customers.validator,
   returns: v.string(),
   handler: async (ctx, args) => {
-    const customer = await ctx.db
-      .query("customers")
-      .withIndex("userId", (q) => q.eq("userId", args.userId))
-      .unique();
+    const customers = await ctx.db.query("customers").collect();
+    const customer = customers.find((c) => c.userId === args.userId);
     if (!customer) {
       const customerId = await ctx.db.insert("customers", {
         id: args.id,
@@ -72,11 +66,9 @@ export const getSubscription = query({
   },
   returns: v.union(schema.tables.subscriptions.validator, v.null()),
   handler: async (ctx, args) => {
-    const subscription = await ctx.db
-      .query("subscriptions")
-      .withIndex("id", (q) => q.eq("id", args.id))
-      .unique();
-    return omitSystemFields(subscription);
+    const subscriptions = await ctx.db.query("subscriptions").collect();
+    const subscription = subscriptions.find((s) => s.id === args.id);
+    return omitSystemFields(subscription ?? null);
   },
 });
 
@@ -86,11 +78,9 @@ export const getProduct = query({
   },
   returns: v.union(schema.tables.products.validator, v.null()),
   handler: async (ctx, args) => {
-    const product = await ctx.db
-      .query("products")
-      .withIndex("id", (q) => q.eq("id", args.id))
-      .unique();
-    return omitSystemFields(product);
+    const products = await ctx.db.query("products").collect();
+    const product = products.find((p) => p.id === args.id);
+    return omitSystemFields(product ?? null);
   },
 });
 
@@ -107,26 +97,20 @@ export const getCurrentSubscription = query({
     v.null(),
   ),
   handler: async (ctx, args) => {
-    const customer = await ctx.db
-      .query("customers")
-      .withIndex("userId", (q) => q.eq("userId", args.userId))
-      .unique();
+    const customers = await ctx.db.query("customers").collect();
+    const customer = customers.find((c) => c.userId === args.userId);
     if (!customer) {
       return null;
     }
-    const subscription = await ctx.db
-      .query("subscriptions")
-      .withIndex("customerId_endedAt", (q) =>
-        q.eq("customerId", customer.id).eq("endedAt", null),
-      )
-      .unique();
+    const subscriptions = await ctx.db.query("subscriptions").collect();
+    const subscription = subscriptions.find(
+      (s) => s.customerId === customer.id && s.endedAt === null,
+    );
     if (!subscription) {
       return null;
     }
-    const product = await ctx.db
-      .query("products")
-      .withIndex("id", (q) => q.eq("id", subscription.productId))
-      .unique();
+    const products = await ctx.db.query("products").collect();
+    const product = products.find((p) => p.id === subscription.productId);
     if (!product) {
       throw new Error(`Product not found: ${subscription.productId}`);
     }
@@ -148,18 +132,18 @@ export const listUserSubscriptions = query({
     }),
   ),
   handler: async (ctx, args) => {
-    const customer = await ctx.db
-      .query("customers")
-      .withIndex("userId", (q) => q.eq("userId", args.userId))
-      .unique();
+    const customers = await ctx.db.query("customers").collect();
+    const customer = customers.find((c) => c.userId === args.userId);
     if (!customer) {
       return [];
     }
+    const allSubscriptions = await ctx.db.query("subscriptions").collect();
+    const customerSubscriptions = allSubscriptions.filter(
+      (s) => s.customerId === customer.id,
+    );
+    const products = await ctx.db.query("products").collect();
     const subscriptions = await asyncMap(
-      ctx.db
-        .query("subscriptions")
-        .withIndex("customerId", (q) => q.eq("customerId", customer.id))
-        .collect(),
+      customerSubscriptions,
       async (subscription) => {
         if (
           subscription.endedAt &&
@@ -168,10 +152,7 @@ export const listUserSubscriptions = query({
           return;
         }
         const product = subscription.productId
-          ? (await ctx.db
-              .query("products")
-              .withIndex("id", (q) => q.eq("id", subscription.productId))
-              .unique()) || null
+          ? products.find((p) => p.id === subscription.productId) || null
           : null;
         return {
           ...omitSystemFields(subscription),
@@ -196,12 +177,10 @@ export const listProducts = query({
     }),
   ),
   handler: async (ctx, args) => {
-    const q = ctx.db.query("products");
+    const allProducts = await ctx.db.query("products").collect();
     const products = args.includeArchived
-      ? await q.collect()
-      : await q
-          .withIndex("isArchived", (q) => q.lt("isArchived", true))
-          .collect();
+      ? allProducts
+      : allProducts.filter((p) => !p.isArchived);
     return products.map((product) => omitSystemFields(product));
   },
 });
@@ -212,10 +191,10 @@ export const createSubscription = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const existingSubscription = await ctx.db
-      .query("subscriptions")
-      .withIndex("id", (q) => q.eq("id", args.subscription.id))
-      .unique();
+    const subscriptions = await ctx.db.query("subscriptions").collect();
+    const existingSubscription = subscriptions.find(
+      (s) => s.id === args.subscription.id,
+    );
     if (existingSubscription) {
       throw new Error(`Subscription already exists: ${args.subscription.id}`);
     }
@@ -232,10 +211,10 @@ export const updateSubscription = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const existingSubscription = await ctx.db
-      .query("subscriptions")
-      .withIndex("id", (q) => q.eq("id", args.subscription.id))
-      .unique();
+    const subscriptions = await ctx.db.query("subscriptions").collect();
+    const existingSubscription = subscriptions.find(
+      (s) => s.id === args.subscription.id,
+    );
     if (!existingSubscription) {
       throw new Error(`Subscription not found: ${args.subscription.id}`);
     }
@@ -252,10 +231,8 @@ export const createProduct = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const existingProduct = await ctx.db
-      .query("products")
-      .withIndex("id", (q) => q.eq("id", args.product.id))
-      .unique();
+    const products = await ctx.db.query("products").collect();
+    const existingProduct = products.find((p) => p.id === args.product.id);
     if (existingProduct) {
       throw new Error(`Product already exists: ${args.product.id}`);
     }
@@ -272,10 +249,8 @@ export const updateProduct = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const existingProduct = await ctx.db
-      .query("products")
-      .withIndex("id", (q) => q.eq("id", args.product.id))
-      .unique();
+    const products = await ctx.db.query("products").collect();
+    const existingProduct = products.find((p) => p.id === args.product.id);
     if (!existingProduct) {
       throw new Error(`Product not found: ${args.product.id}`);
     }
@@ -292,11 +267,11 @@ export const listCustomerSubscriptions = query({
   },
   returns: v.array(schema.tables.subscriptions.validator),
   handler: async (ctx, args) => {
-    const subscriptions = await ctx.db
-      .query("subscriptions")
-      .withIndex("customerId", (q) => q.eq("customerId", args.customerId))
-      .collect();
-    return subscriptions.map(omitSystemFields);
+    const subscriptions = await ctx.db.query("subscriptions").collect();
+    const filtered = subscriptions.filter(
+      (s) => s.customerId === args.customerId,
+    );
+    return filtered.map(omitSystemFields);
   },
 });
 
@@ -404,12 +379,10 @@ export const updateProducts = internalMutation({
       let createdCount = 0;
       const errors: Array<{ productId: string; error: string }> = [];
 
+      const allProducts = await ctx.db.query("products").collect();
       await asyncMap(args.products, async (product) => {
         try {
-          const existingProduct = await ctx.db
-            .query("products")
-            .withIndex("id", (q) => q.eq("id", product.id))
-            .unique();
+          const existingProduct = allProducts.find((p) => p.id === product.id);
           
           if (existingProduct) {
             await ctx.db.patch(existingProduct._id, product);
