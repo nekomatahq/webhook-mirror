@@ -14,13 +14,18 @@ export const polar = new Polar(components.polar, {
         const user = await ctx.runQuery(api.users.query.getMe);
 
         if (!user) {
-            console.log("[POLAR] getUserInfo - no user found");
-            return { userId: "", email: "" };
+            console.error("[POLAR] getUserInfo - no user found");
+            throw new Error("User not authenticated");
+        }
+
+        if (!user.email) {
+            console.error("[POLAR] getUserInfo - user has no email");
+            throw new Error("User email is required for billing");
         }
 
         const userInfo: { userId: string; email: string } = {
             userId: user._id,
-            email: user.email ?? "",
+            email: user.email,
         };
 
         console.log("[POLAR] getUserInfo", {
