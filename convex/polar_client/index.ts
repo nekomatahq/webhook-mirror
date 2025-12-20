@@ -26,7 +26,7 @@ import {
 } from "convex/server";
 import { type Infer, v } from "convex/values";
 import { mapValues } from "remeda";
-import { components } from "../_generated/api.js";
+import { components, api, internal } from "../_generated/api.js";
 import schema from "../schema.js";
 import {
   type RunMutationCtx,
@@ -59,6 +59,8 @@ export class Polar<
   private organizationToken: string;
   private webhookSecret: string;
   private server: "sandbox" | "production";
+  private mainApi: any = null;
+  private mainInternal: any = null;
 
   constructor(
     public component: typeof components.polar,
@@ -71,8 +73,16 @@ export class Polar<
       organizationToken?: string;
       webhookSecret?: string;
       server?: "sandbox" | "production";
+      mainApi?: any;
+      mainInternal?: any;
     },
   ) {
+    if (config.mainApi) {
+      this.mainApi = config.mainApi;
+    }
+    if (config.mainInternal) {
+      this.mainInternal = config.mainInternal;
+    }
     this.products = config.products ?? ({} as Products);
     this.organizationToken =
       config.organizationToken ?? process.env["POLAR_ORGANIZATION_TOKEN"] ?? "";
@@ -96,6 +106,10 @@ export class Polar<
   }
   getCustomerByUserId(ctx: RunQueryCtx, userId: string) {
     console.log("[Polar:getCustomerByUserId]", { userId: redactUserId(userId) });
+    // Use main app's API if available, otherwise fall back to component API
+    if (this.mainApi) {
+      return ctx.runQuery(this.mainApi.getCustomerByUserId, { userId });
+    }
     return ctx.runQuery(this.component.lib.getCustomerByUserId, { userId });
   }
   async syncProducts(ctx: RunActionCtx) {
@@ -103,10 +117,18 @@ export class Polar<
       polarAccessToken: this.organizationToken ? "[REDACTED]" : undefined,
       server: this.server,
     }));
-    await ctx.runAction(this.component.lib.syncProducts, {
-      polarAccessToken: this.organizationToken,
-      server: this.server,
-    });
+    // Use main app's API if available, otherwise fall back to component API
+    if (this.mainApi) {
+      await ctx.runAction(this.mainApi.syncProducts, {
+        polarAccessToken: this.organizationToken,
+        server: this.server,
+      });
+    } else {
+      await ctx.runAction(this.component.lib.syncProducts, {
+        polarAccessToken: this.organizationToken,
+        server: this.server,
+      });
+    }
   }
   async createCheckoutSession(
     ctx: RunMutationCtx,
@@ -129,12 +151,10 @@ export class Polar<
     console.log("[Polar:createCheckoutSession:start]", createSafeLog({
       userId, email, productIds, origin, successUrl, subscriptionId,
     }));
-    const dbCustomer = await ctx.runQuery(
-      this.component.lib.getCustomerByUserId,
-      {
-        userId,
-      },
-    );
+    // Use main app's API if available, otherwise fall back to component API
+    const dbCustomer = this.mainApi
+      ? await ctx.runQuery(this.mainApi.getCustomerByUserId, { userId })
+      : await ctx.runQuery(this.component.lib.getCustomerByUserId, { userId });
     const createCustomer = async () => {
       const customer = await customersCreate(this.polar, {
         customerCreate: {
@@ -153,10 +173,18 @@ export class Polar<
     };
     const customerId = dbCustomer?.id || (await createCustomer()).id;
     if (!dbCustomer) {
-      await ctx.runMutation(this.component.lib.insertCustomer, {
-        id: customerId,
-        userId,
-      });
+      // Use main app's API if available, otherwise fall back to component API
+      if (this.mainApi) {
+        await ctx.runMutation(this.mainApi.insertCustomer, {
+          id: customerId,
+          userId,
+        });
+      } else {
+        await ctx.runMutation(this.component.lib.insertCustomer, {
+          id: customerId,
+          userId,
+        });
+      }
       console.log("[Polar:createCheckoutSession:insertCustomer]", createSafeLog({ customerId, userId }));
     }
     const checkout = await checkoutsCreate(this.polar, {
@@ -181,10 +209,10 @@ export class Polar<
     { userId }: { userId: string },
   ) {
     console.log("[Polar:createCustomerPortalSession:start]", { userId: redactUserId(userId) });
-    const customer = await ctx.runQuery(
-      this.component.lib.getCustomerByUserId,
-      { userId },
-    );
+    // Use main app's API if available, otherwise fall back to component API
+    const customer = this.mainApi
+      ? await ctx.runQuery(this.mainApi.getCustomerByUserId, { userId })
+      : await ctx.runQuery(this.component.lib.getCustomerByUserId, { userId });
 
     if (!customer) {
       console.error("[Polar:createCustomerPortalSession:notfound]", { userId: redactUserId(userId) });
@@ -207,6 +235,12 @@ export class Polar<
     { includeArchived }: { includeArchived?: boolean } = {},
   ) {
     console.log("[Polar:listProducts]", createSafeLog({ includeArchived }));
+    // Use main app's API if available, otherwise fall back to component API
+    if (this.mainApi) {
+      return ctx.runQuery(this.mainApi.listProducts, {
+        includeArchived,
+      });
+    }
     return ctx.runQuery(this.component.lib.listProducts, {
       includeArchived,
     });
@@ -216,19 +250,17 @@ export class Polar<
     { userId }: { userId: string },
   ) {
     console.log("[Polar:getCurrentSubscription:start]", { userId: redactUserId(userId) });
-    const subscription = await ctx.runQuery(
-      this.component.lib.getCurrentSubscription,
-      {
-        userId,
-      },
-    );
+    // Use main app's API if available, otherwise fall back to component API
+    const subscription = this.mainApi
+      ? await ctx.runQuery(this.mainApi.getCurrentSubscription, { userId })
+      : await ctx.runQuery(this.component.lib.getCurrentSubscription, { userId });
     if (!subscription) {
       console.log("[Polar:getCurrentSubscription:notfound]", { userId: redactUserId(userId) });
       return null;
     }
-    const product = await ctx.runQuery(this.component.lib.getProduct, {
-      id: subscription.productId,
-    });
+    const product = this.mainApi
+      ? await ctx.runQuery(this.mainApi.getProduct, { id: subscription.productId })
+      : await ctx.runQuery(this.component.lib.getProduct, { id: subscription.productId });
     if (!product) {
       console.error("[Polar:getCurrentSubscription:productNotFound]", createSafeLog({ productId: subscription.productId }));
       throw new Error("Product not found");
@@ -245,6 +277,10 @@ export class Polar<
   }
   getProduct(ctx: RunQueryCtx, { productId }: { productId: string }) {
     console.log("[Polar:getProduct]", { productId });
+    // Use main app's API if available, otherwise fall back to component API
+    if (this.mainApi) {
+      return ctx.runQuery(this.mainApi.getProduct, { id: productId });
+    }
     return ctx.runQuery(this.component.lib.getProduct, { id: productId });
   }
   async changeSubscription(
@@ -331,13 +367,18 @@ export class Polar<
         args: {},
         handler: async (ctx) => {
           console.log("[Polar:api:getConfiguredProducts] - fetching configured products");
-          const products = await this.listProducts(ctx);
+          // Include archived products since configured products might be archived
+          const products = await this.listProducts(ctx, { includeArchived: true });
           const mapped = mapValues(this.products, (productId, key) => {
             const product = products.find((p: { id: string }) => p.id === productId);
             if (!product) {
-              console.warn(`[Polar:api:getConfiguredProducts] - Product not found for key '${key}' with id '${productId}'`);
+              console.warn(`[Polar:api:getConfiguredProducts] - Product not found for key '${key}' with id '${productId}'`, {
+                searchedProductId: productId,
+                availableProductIds: products.map((p: { id: string }) => p.id),
+                totalProducts: products.length,
+              });
             } else {
-              console.log(`[Polar:api:getConfiguredProducts] - Found product for key '${key}'`, { productId });
+              console.log(`[Polar:api:getConfiguredProducts] - Found product for key '${key}'`, { productId, productName: product.name });
             }
             return {
               id: productId,
@@ -453,33 +494,61 @@ export class Polar<
           switch (event.type) {
             case "subscription.created": {
               console.log("[Polar:registerRoutes:subscription.created]", createSafeLog(event.data));
-              await ctx.runMutation(this.component.lib.createSubscription, {
-                subscription: convertToDatabaseSubscription(event.data),
-              });
+              // Use main app's API if available, otherwise fall back to component API
+              if (this.mainApi) {
+                await ctx.runMutation(this.mainApi.createSubscription, {
+                  subscription: convertToDatabaseSubscription(event.data),
+                });
+              } else {
+                await ctx.runMutation(this.component.lib.createSubscription, {
+                  subscription: convertToDatabaseSubscription(event.data),
+                });
+              }
               await onSubscriptionCreated?.(ctx, event);
               break;
             }
             case "subscription.updated": {
               console.log("[Polar:registerRoutes:subscription.updated]", createSafeLog(event.data));
-              await ctx.runMutation(this.component.lib.updateSubscription, {
-                subscription: convertToDatabaseSubscription(event.data),
-              });
+              // Use main app's API if available, otherwise fall back to component API
+              if (this.mainApi) {
+                await ctx.runMutation(this.mainApi.updateSubscription, {
+                  subscription: convertToDatabaseSubscription(event.data),
+                });
+              } else {
+                await ctx.runMutation(this.component.lib.updateSubscription, {
+                  subscription: convertToDatabaseSubscription(event.data),
+                });
+              }
               await onSubscriptionUpdated?.(ctx, event);
               break;
             }
             case "product.created": {
               console.log("[Polar:registerRoutes:product.created]", createSafeLog(event.data));
-              await ctx.runMutation(this.component.lib.createProduct, {
-                product: convertToDatabaseProduct(event.data),
-              });
+              // Use main app's API if available, otherwise fall back to component API
+              if (this.mainApi) {
+                await ctx.runMutation(this.mainApi.createProduct, {
+                  product: convertToDatabaseProduct(event.data),
+                });
+              } else {
+                await ctx.runMutation(this.component.lib.createProduct, {
+                  product: convertToDatabaseProduct(event.data),
+                });
+              }
               await onProductCreated?.(ctx, event);
               break;
             }
             case "product.updated": {
               console.log("[Polar:registerRoutes:product.updated]", createSafeLog(event.data));
-              await ctx.runMutation(this.component.lib.updateProduct, {
-                product: convertToDatabaseProduct(event.data),
-              });
+              // Use main app's API if available, otherwise fall back to component API
+              if (this.mainApi) {
+                await ctx.runMutation(this.mainApi.updateProduct, {
+                  product: convertToDatabaseProduct(event.data),
+                });
+              } else {
+                await ctx.runMutation(this.component.lib.updateProduct, {
+                  product: convertToDatabaseProduct(event.data),
+                });
+              }
               await onProductUpdated?.(ctx, event);
               break;
             }

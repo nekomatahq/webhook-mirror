@@ -3,66 +3,92 @@ import { httpAction } from "./_generated/server";
 import { auth } from "./auth";
 import { polar } from "./polar";
 import { api } from "./_generated/api";
-import { createSafeLog, redactHeaders, redactBody } from "./utils/logging";
+import {
+  createSafeLog,
+  redactHeaders,
+  redactBody,
+} from "./utils/logging";
 
 const http = httpRouter();
 
 auth.addHttpRoutes(http);
 polar.registerRoutes(http, {
-    path: "/polar/events",
-    onSubscriptionUpdated: async (ctx, event) => {
-      // Handle subscription updates, like cancellations.
-      // Note that a cancelled subscription will not be deleted from the database,
-      // so this information remains available without a hook, eg., via
-      // `getCurrentSubscription()`.
-      if (event.data.customerCancellationReason) {
-        console.log("Customer cancelled:", event.data.customerCancellationReason);
-      }
-    },
-    onSubscriptionCreated: async (ctx, event) => {
-      // Handle new subscriptions
-    },
-    onProductCreated: async (ctx, event) => {
-      // Handle new products
-    },
-    onProductUpdated: async (ctx, event) => {
-      // Handle product updates
-    },
-  });
+  path: "/polar/events",
+  onSubscriptionUpdated: async (ctx, event) => {
+    // Handle subscription updates, like cancellations.
+    // Note that a cancelled subscription will not be deleted from the database,
+    // so this information remains available without a hook, eg., via
+    // `getCurrentSubscription()`.
+    if (event.data.customerCancellationReason) {
+      console.log(
+        "[Polar] Customer cancelled",
+        createSafeLog({ reason: event.data.customerCancellationReason })
+      );
+    }
+  },
+  onSubscriptionCreated: async (ctx, event) => {
+    // Handle new subscriptions
+    console.log(
+      "[Polar] Subscription created",
+      createSafeLog({ event })
+    );
+  },
+  onProductCreated: async (ctx, event) => {
+    // Handle new products
+    console.log("[Polar] Product created", createSafeLog({ event }));
+  },
+  onProductUpdated: async (ctx, event) => {
+    // Handle product updates
+    console.log("[Polar] Product updated", createSafeLog({ event }));
+  },
+});
+
 const webhookHandler = httpAction(async (ctx, request) => {
   const url = new URL(request.url);
   const pathParts = url.pathname.split("/").filter(Boolean);
 
   if (pathParts.length < 2 || pathParts[0] !== "webhook") {
-    console.log("[HTTP] Webhook request - invalid path", {
-      path: url.pathname,
-      method: request.method,
-    });
+    console.log(
+      "[HTTP] Webhook request - invalid path",
+      createSafeLog({
+        path: url.pathname,
+        method: request.method,
+      })
+    );
     return new Response("Not Found", { status: 404 });
   }
 
   const slug = pathParts[1];
 
-  console.log("[HTTP] Webhook request received", {
-    slug,
-    method: request.method,
-    path: url.pathname,
-  });
+  console.log(
+    "[HTTP] Webhook request received",
+    createSafeLog({
+      slug,
+      method: request.method,
+      path: url.pathname,
+    })
+  );
 
   const endpoint = await ctx.runQuery(api.endpoints.query.getEndpointBySlug, {
     slug,
   });
 
   if (!endpoint) {
-    console.log("[HTTP] Webhook endpoint not found", { slug });
+    console.log(
+      "[HTTP] Webhook endpoint not found",
+      createSafeLog({ slug })
+    );
     return new Response("Endpoint not found", { status: 404 });
   }
 
   if (!endpoint.active) {
-    console.log("[HTTP] Webhook endpoint inactive", {
-      slug,
-      endpointId: endpoint._id,
-    });
+    console.log(
+      "[HTTP] Webhook endpoint inactive",
+      createSafeLog({
+        slug,
+        endpointId: endpoint._id,
+      })
+    );
     return new Response("Endpoint is inactive", { status: 403 });
   }
 
@@ -93,11 +119,14 @@ const webhookHandler = httpAction(async (ctx, request) => {
       }
     }
   } catch (error) {
-    console.error("[HTTP] Error reading request body", {
-      slug,
-      endpointId: endpoint._id,
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
+    console.error(
+      "[HTTP] Error reading request body",
+      createSafeLog({
+        slug,
+        endpointId: endpoint._id,
+        error: error instanceof Error ? error.message : "Unknown error",
+      })
+    );
     body = null;
   }
 
@@ -122,17 +151,27 @@ const webhookHandler = httpAction(async (ctx, request) => {
     timestamp: Date.now(),
   });
 
-  console.log("[HTTP] Webhook request saved", {
-    endpointId: endpoint._id,
-    slug,
-    method,
-    bodySize,
-  });
+  console.log(
+    "[HTTP] Webhook request saved",
+    createSafeLog({
+      endpointId: endpoint._id,
+      slug,
+      method,
+      bodySize,
+    })
+  );
 
   return new Response("OK", { status: 200 });
 });
 
-const methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"] as const;
+const methods = [
+  "GET",
+  "POST",
+  "PUT",
+  "DELETE",
+  "PATCH",
+  "OPTIONS",
+] as const;
 
 for (const method of methods) {
   http.route({

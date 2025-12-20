@@ -2,12 +2,16 @@ import { PolarCore } from "@polar-sh/sdk/core.js";
 import { productsList } from "@polar-sh/sdk/funcs/productsList.js";
 
 import { v } from "convex/values";
-import { action, internalMutation, mutation, query } from "./_generated/server.js";
+import type { Infer } from "convex/values";
+import { action, internalMutation, internalQuery, mutation, query } from "./_generated/server.js";
 import schema from "./schema.js";
 import { asyncMap } from "convex-helpers";
 import { api, components, internal } from "./_generated/api.js";
 import { convertToDatabaseProduct } from "./util";
 import { createSafeLog, redactObject } from "./utils/logging.js";
+
+type Product = Infer<typeof schema.tables.products.validator>;
+type Subscription = Infer<typeof schema.tables.subscriptions.validator>;
 
 export const getCustomerByUserId = query({
   args: {
@@ -72,7 +76,23 @@ export const getSubscription = query({
   },
 });
 
-export const getProduct = query({
+// Internal query functions that always query the main app's database
+// These are used when functions are called through the component API
+export const listAllProductsInternal = internalQuery({
+  args: {
+    includeArchived: v.optional(v.boolean()),
+  },
+  returns: v.array(schema.tables.products.validator),
+  handler: async (ctx, args) => {
+    const allProducts = await ctx.db.query("products").collect();
+    const products = args.includeArchived
+      ? allProducts
+      : allProducts.filter((p) => !p.isArchived);
+    return products.map((product) => omitSystemFields(product));
+  },
+});
+
+export const getProductInternal = internalQuery({
   args: {
     id: v.string(),
   },
@@ -81,6 +101,20 @@ export const getProduct = query({
     const products = await ctx.db.query("products").collect();
     const product = products.find((p) => p.id === args.id);
     return omitSystemFields(product ?? null);
+  },
+});
+
+export const getProduct = query({
+  args: {
+    id: v.string(),
+  },
+  returns: v.union(schema.tables.products.validator, v.null()),
+  handler: async (ctx, args): Promise<Product | null> => {
+    // Use internal API to ensure we query the main app's database
+    // even when called through component API
+    return await ctx.runQuery(internal.polar_ops.getProductInternal, {
+      id: args.id,
+    });
   },
 });
 
@@ -109,14 +143,30 @@ export const getCurrentSubscription = query({
     if (!subscription) {
       return null;
     }
-    const products = await ctx.db.query("products").collect();
-    const product = products.find((p) => p.id === subscription.productId);
+    // Use internal API to ensure we query the main app's database
+    // even when called through component API
+    // Query all products including archived ones since subscriptions might reference archived products
+    const allProducts: Product[] = await ctx.runQuery(internal.polar_ops.listAllProductsInternal, {
+      includeArchived: true,
+    });
+    const product = allProducts.find((p: Product) => p.id === subscription.productId);
     if (!product) {
-      throw new Error(`Product not found: ${subscription.productId}`);
+      console.error("[getCurrentSubscription] Product not found", {
+        productId: subscription.productId,
+        productIdType: typeof subscription.productId,
+        availableProductIds: allProducts.map((p: Product) => p.id).slice(0, 10), // Log first 10 for debugging
+        totalProducts: allProducts.length,
+        productIdMatches: allProducts.filter((p: Product) => 
+          p.id === subscription.productId || 
+          p.id?.toString() === subscription.productId?.toString()
+        ).map((p: Product) => ({ id: p.id, name: p.name })),
+      });
+      // Return null instead of throwing to allow the UI to handle gracefully
+      return null;
     }
     return {
       ...omitSystemFields(subscription),
-      product: omitSystemFields(product),
+      product: product, // Product already has system fields omitted from internal query
     };
   },
 });
@@ -141,7 +191,11 @@ export const listUserSubscriptions = query({
     const customerSubscriptions = allSubscriptions.filter(
       (s) => s.customerId === customer.id,
     );
-    const products = await ctx.db.query("products").collect();
+    // Use internal API to ensure we query the main app's database
+    // even when called through component API
+    const products: Product[] = await ctx.runQuery(internal.polar_ops.listAllProductsInternal, {
+      includeArchived: true,
+    });
     const subscriptions = await asyncMap(
       customerSubscriptions,
       async (subscription) => {
@@ -152,11 +206,11 @@ export const listUserSubscriptions = query({
           return;
         }
         const product = subscription.productId
-          ? products.find((p) => p.id === subscription.productId) || null
+          ? products.find((p: Product) => p.id === subscription.productId) || null
           : null;
         return {
-          ...omitSystemFields(subscription),
-          product: omitSystemFields(product),
+          ...omitSystemFields(subscription as { _id: string; _creationTime: number } & Subscription),
+          product: product, // Product already has system fields omitted from internal query (or null)
         };
       },
     );
@@ -176,12 +230,12 @@ export const listProducts = query({
       priceAmount: v.optional(v.number()),
     }),
   ),
-  handler: async (ctx, args) => {
-    const allProducts = await ctx.db.query("products").collect();
-    const products = args.includeArchived
-      ? allProducts
-      : allProducts.filter((p) => !p.isArchived);
-    return products.map((product) => omitSystemFields(product));
+  handler: async (ctx, args): Promise<Product[]> => {
+    // Use internal API to ensure we query the main app's database
+    // even when called through component API
+    return await ctx.runQuery(internal.polar_ops.listAllProductsInternal, {
+      includeArchived: args.includeArchived,
+    });
   },
 });
 

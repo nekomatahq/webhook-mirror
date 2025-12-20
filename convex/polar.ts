@@ -1,10 +1,11 @@
 import { Polar } from "./polar_client";
-import { api, components } from "./_generated/api";
+import { api, components, internal } from "./_generated/api";
 import { internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { redactEmail, redactUserId } from "./utils/logging";
 
-export const polar = new Polar(components.polar, {
+// Pass main app's API to ensure all database operations use the main app's database
+export const polar: Polar = new Polar(components.polar, {
     products: {
         premiumMonthly: process.env.POLAR_PREMIUM_MONTHLY_PRODUCT_ID!,
     },
@@ -35,6 +36,9 @@ export const polar = new Polar(components.polar, {
 
         return userInfo;
     },
+    // Pass main app's API to ensure all database operations use the main app's database
+    mainApi: api.polar_ops,
+    mainInternal: internal.polar_ops,
 });
 
 // Export API functions from the Polar client
