@@ -17,9 +17,6 @@ export const metadata: Metadata = {
   title: "Webhook Mirror | Nekomata Suite",
   description:
     "Inspect and replay webhooks without guesswork. Generate temporary webhook endpoints, capture incoming requests, and debug integrations.",
-  icons: {
-    icon: "/convex.svg",
-  },
 };
 
 export default function RootLayout({

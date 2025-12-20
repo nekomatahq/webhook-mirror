@@ -15,7 +15,7 @@ export default function Home() {
           replay them to debug integrations. Capture → inspect → replay.
         </p>
         <Button asChild size="lg" className="text-base">
-          <Link href="#">Get full access</Link>
+          <Link href="/dashboard/billing">Get full access</Link>
         </Button>
       </section>
 
@@ -130,19 +130,19 @@ export default function Home() {
         <div className="max-w-4xl mx-auto w-full">
           <nav className="flex flex-wrap gap-6 text-sm">
             <Link
-              href="#"
+              href="https://nekomata.com"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               Back to Nekomata
             </Link>
             <Link
-              href="#"
+              href="/terms"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               Terms
             </Link>
             <Link
-              href="#"
+              href="/privacy"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               Privacy
