@@ -165,26 +165,47 @@ async function handleWebhook(request: NextRequest, slug: string) {
 
     console.log("[HTTP] Webhook request captured", safeLog);
 
-    await convex.mutation(api.requests.mutation.createRequest, {
-      endpointId: endpoint._id,
-      method,
-      headers,
-      body,
-      bodySize,
-      timestamp: Date.now(),
-    });
-
-    console.log(
-      "[HTTP] Webhook request saved",
-      createSafeLog({
+    try {
+      await convex.mutation(api.requests.mutation.createRequest, {
         endpointId: endpoint._id,
-        slug,
         method,
+        headers,
+        body,
         bodySize,
-      })
-    );
+        timestamp: Date.now(),
+      });
 
-    return NextResponse.json({ status: "ok" }, { status: 200 });
+      console.log(
+        "[HTTP] Webhook request saved",
+        createSafeLog({
+          endpointId: endpoint._id,
+          slug,
+          method,
+          bodySize,
+        })
+      );
+
+      return NextResponse.json({ status: "ok" }, { status: 200 });
+    } catch (mutationError: any) {
+      // Check if this is a free tier limit error
+      const errorMessage = mutationError?.message || String(mutationError);
+      if (errorMessage.includes("FREE_REQUEST_LIMIT_REACHED") || errorMessage.includes("5 captured requests")) {
+        console.log(
+          "[HTTP] Webhook request limit reached for free tier",
+          createSafeLog({
+            endpointId: endpoint._id,
+            slug,
+            error: errorMessage,
+          })
+        );
+        return NextResponse.json(
+          { error: "Request limit reached. Free tier includes 5 captured requests per endpoint." },
+          { status: 429 }
+        );
+      }
+      // Re-throw other errors to be handled by outer catch
+      throw mutationError;
+    }
   } catch (error) {
     console.error(
       "[HTTP] Webhook error",

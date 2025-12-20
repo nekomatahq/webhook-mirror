@@ -4,6 +4,8 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "../_generated/api";
 import { redactUserId, redactHeaders, redactBody, createSafeLog } from "../utils/logging";
 import { validateReplayUrl } from "../utils/url";
+import { checkSubscriptionStatus } from "../utils/subscription";
+import { FREE_REPLAY_DISABLED } from "../utils/errors";
 
 export const replayRequest = action({
   args: {
@@ -24,6 +26,18 @@ export const replayRequest = action({
         requestId: args.requestId,
       });
       throw new ConvexError("Unauthorized");
+    }
+
+    // Check subscription status for free tier limits
+    const hasActiveSubscription = await checkSubscriptionStatus(ctx);
+    if (!hasActiveSubscription) {
+      console.log("[REQUESTS] replayRequest - free tier replay disabled", {
+        requestId: args.requestId,
+        userId: redactUserId(userId),
+      });
+      throw new ConvexError(
+        `Replay is available with Nekomata Suite. Error code: ${FREE_REPLAY_DISABLED}`
+      );
     }
 
     console.log("[REQUESTS] replayRequest", {

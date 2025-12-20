@@ -17,9 +17,6 @@ export default function DashboardLayout({
   const user = useQuery(api.users.query.getMe);
   const subscriptionStatus = useQuery(api.subscription.query.getSubscriptionStatus);
 
-  // Allow access to billing page without subscription
-  const isBillingPage = pathname === "/dashboard/billing";
-
   // Redirect if not authenticated
   useEffect(() => {
     if (user === null) {
@@ -41,31 +38,30 @@ export default function DashboardLayout({
     return null;
   }
 
-  // Allow access to billing page even without subscription
-  if (!subscriptionStatus?.hasActiveSubscription && !isBillingPage) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="max-w-md space-y-4 text-center">
-          <h1 className="text-2xl font-semibold">Subscription Required</h1>
-          <p className="text-muted-foreground">
-            You need an active subscription to access Webhook Mirror.
-          </p>
-          <a
-            href="/dashboard/billing"
-            className="inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Manage Subscription
-          </a>
-        </div>
-      </div>
-    );
-  }
+  // Free users can access the dashboard with limits - no blocking paywall
+
+  const isFreeTier = !subscriptionStatus?.hasActiveSubscription;
 
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
+        {isFreeTier && (
+          <div className="border-b border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-900/50">
+            <div className="px-6 py-3">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                <span className="font-medium">Free tier:</span> You are on the free tier. Hard limits apply: 1 endpoint max, 5 stored requests per endpoint.{" "}
+                <a
+                  href="/dashboard/billing"
+                  className="underline hover:no-underline font-medium"
+                >
+                  Upgrade to unlock unlimited access
+                </a>
+              </p>
+            </div>
+          </div>
+        )}
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>

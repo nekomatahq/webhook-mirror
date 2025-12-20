@@ -33,7 +33,9 @@ export const getSubscriptionStatus = query({
         { userId: user._id }
       );
       
-      const hasActiveSubscription = subscription !== null && subscription.status === "active";
+      // Consider both "active" and "trialing" as active subscriptions
+      const hasActiveSubscription = subscription !== null && 
+        (subscription.status === "active" || subscription.status === "trialing");
       
       console.log("[SUBSCRIPTION] getSubscriptionStatus - result", {
         userId: redactUserId(user._id),

@@ -1,6 +1,8 @@
 import { mutation } from "../_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { redactHeaders, redactBody, createSafeLog } from "../utils/logging";
+import { checkUserSubscriptionStatus } from "../utils/subscription";
+import { FREE_REQUEST_LIMIT_REACHED } from "../utils/errors";
 
 export const createRequest = mutation({
   args: {
@@ -36,6 +38,30 @@ export const createRequest = mutation({
         slug: endpoint.slug,
       });
       throw new Error("Endpoint is inactive");
+    }
+
+    // Check subscription status for endpoint owner to enforce free tier limits
+    const hasActiveSubscription = await checkUserSubscriptionStatus(
+      ctx,
+      endpoint.userId
+    );
+
+    if (!hasActiveSubscription) {
+      // For free users, enforce 5 request limit per endpoint
+      const allRequests = await ctx.db.query("requests").collect();
+      const endpointRequests = allRequests.filter(
+        (r) => r.endpointId === args.endpointId
+      );
+
+      if (endpointRequests.length >= 5) {
+        console.log("[REQUESTS] createRequest - free tier limit reached", {
+          endpointId: args.endpointId,
+          currentCount: endpointRequests.length,
+        });
+        throw new ConvexError(
+          `Free tier includes 5 captured requests per endpoint. Upgrade to unlock unlimited requests. Error code: ${FREE_REQUEST_LIMIT_REACHED}`
+        );
+      }
     }
 
     const requestId = await ctx.db.insert("requests", {

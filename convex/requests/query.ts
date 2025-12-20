@@ -2,6 +2,7 @@ import { query } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { redactUserId } from "../utils/logging";
+import { checkUserSubscriptionStatus } from "../utils/subscription";
 
 export const listRequests = query({
   args: {
@@ -51,14 +52,26 @@ export const listRequests = query({
       throw new Error("Unauthorized");
     }
 
+    // Check subscription status for endpoint owner to enforce free tier limits
+    const hasActiveSubscription = await checkUserSubscriptionStatus(
+      ctx,
+      endpoint.userId
+    );
+
     const allRequests = await ctx.db.query("requests").collect();
     const filtered = allRequests.filter((r) => r.endpointId === args.endpointId);
-    const requests = filtered.sort((a, b) => b._creationTime - a._creationTime);
+    let requests = filtered.sort((a, b) => b._creationTime - a._creationTime);
+
+    // Limit to 5 most recent requests for free users
+    if (!hasActiveSubscription) {
+      requests = requests.slice(0, 5);
+    }
 
     console.log("[REQUESTS] listRequests - result", {
       endpointId: args.endpointId,
       userId: redactUserId(userId),
       count: requests.length,
+      hasActiveSubscription,
     });
 
     return requests;

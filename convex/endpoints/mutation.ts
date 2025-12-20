@@ -1,7 +1,9 @@
 import { mutation } from "../_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { redactUserId, createSafeLog } from "../utils/logging";
+import { checkSubscriptionStatus } from "../utils/subscription";
+import { FREE_ENDPOINT_LIMIT_REACHED, FREE_ACTIVATION_DISABLED } from "../utils/errors";
 
 function generateSlug(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -30,6 +32,24 @@ export const createEndpoint = mutation({
       userId: redactUserId(userId),
       name: args.name,
     });
+
+    // Check subscription status for free tier limits
+    const hasActiveSubscription = await checkSubscriptionStatus(ctx);
+    if (!hasActiveSubscription) {
+      // Count existing endpoints for this user
+      const allEndpoints = await ctx.db.query("endpoints").collect();
+      const userEndpoints = allEndpoints.filter((e) => e.userId === userId);
+      
+      if (userEndpoints.length >= 1) {
+        console.log("[ENDPOINTS] createEndpoint - free tier limit reached", {
+          userId: redactUserId(userId),
+          existingCount: userEndpoints.length,
+        });
+        throw new ConvexError(
+          `Free tier includes 1 endpoint. Upgrade to unlock unlimited endpoints. Error code: ${FREE_ENDPOINT_LIMIT_REACHED}`
+        );
+      }
+    }
 
     let slug: string;
     let exists = true;
@@ -101,6 +121,18 @@ export const updateEndpoint = mutation({
         endpointUserId: redactUserId(endpoint.userId),
       });
       throw new Error("Unauthorized");
+    }
+
+    // Check subscription status for free tier limits
+    const hasActiveSubscription = await checkSubscriptionStatus(ctx);
+    if (!hasActiveSubscription && args.active !== undefined) {
+      console.log("[ENDPOINTS] updateEndpoint - free tier activation disabled", {
+        endpointId: args.id,
+        userId: redactUserId(userId),
+      });
+      throw new ConvexError(
+        `Endpoint activation is available with Nekomata Suite. Error code: ${FREE_ACTIVATION_DISABLED}`
+      );
     }
 
     const updates: {

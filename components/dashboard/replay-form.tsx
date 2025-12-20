@@ -10,6 +10,7 @@ import { AlertCircle, CheckCircle2, Loader2, ExternalLink } from "lucide-react";
 
 interface ReplayFormProps {
   requestId: Id<"requests">;
+  hasActiveSubscription?: boolean;
 }
 
 // Helper function to strip stack trace and debug information from error messages
@@ -79,7 +80,7 @@ function parseErrorMessage(error: string): {
   return { title: cleaned };
 }
 
-export const ReplayForm = ({ requestId }: ReplayFormProps) => {
+export const ReplayForm = ({ requestId, hasActiveSubscription = false }: ReplayFormProps) => {
   const [targetUrl, setTargetUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
@@ -89,6 +90,7 @@ export const ReplayForm = ({ requestId }: ReplayFormProps) => {
   } | null>(null);
 
   const replayRequest = useAction(api.requests.action.replayRequest);
+  const isDisabled = !hasActiveSubscription;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,6 +133,13 @@ export const ReplayForm = ({ requestId }: ReplayFormProps) => {
 
   return (
     <div className="space-y-4">
+      {isDisabled && (
+        <div className="rounded-md border border-muted bg-muted/50 p-3">
+          <p className="text-sm text-muted-foreground">
+            Replay is available with Nekomata Suite
+          </p>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="flex gap-2">
         <Input
           type="url"
@@ -138,9 +147,9 @@ export const ReplayForm = ({ requestId }: ReplayFormProps) => {
           value={targetUrl}
           onChange={(e) => setTargetUrl(e.target.value)}
           className="flex-1"
-          disabled={loading}
+          disabled={loading || isDisabled}
         />
-        <Button type="submit" disabled={loading || !targetUrl.trim()}>
+        <Button type="submit" disabled={loading || !targetUrl.trim() || isDisabled}>
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -23,17 +23,21 @@ export default function EndpointDetailPage() {
   const endpointId = params.id as Id<"endpoints">;
   const endpoint = useQuery(api.endpoints.query.getEndpoint, { id: endpointId });
   const requests = useQuery(api.requests.query.listRequests, { endpointId });
+  const subscriptionStatus = useQuery(api.subscription.query.getSubscriptionStatus);
   const updateEndpoint = useMutation(api.endpoints.mutation.updateEndpoint);
   const [editingName, setEditingName] = useState(false);
   const [endpointName, setEndpointName] = useState("");
   const [selectedRequestId, setSelectedRequestId] = useState<Id<"requests"> | null>(null);
   const [bodyView, setBodyView] = useState<"raw" | "json" | "hex">("raw");
+  const [toggleError, setToggleError] = useState<string | null>(null);
   const selectedRequest = useQuery(
     api.requests.query.getRequest,
     selectedRequestId ? { id: selectedRequestId } : "skip"
   );
 
-  if (endpoint === undefined || requests === undefined) {
+  const hasActiveSubscription = subscriptionStatus?.hasActiveSubscription ?? false;
+
+  if (endpoint === undefined || requests === undefined || subscriptionStatus === undefined) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-32 w-full" />
@@ -69,7 +73,17 @@ export default function EndpointDetailPage() {
   };
 
   const handleToggleActive = async () => {
-    await updateEndpoint({ id: endpointId, active: !endpoint.active });
+    if (!hasActiveSubscription) {
+      setToggleError("Endpoint activation is available with Nekomata Suite");
+      return;
+    }
+    setToggleError(null);
+    try {
+      await updateEndpoint({ id: endpointId, active: !endpoint.active });
+    } catch (error: any) {
+      const errorMsg = error?.message || "Failed to update endpoint";
+      setToggleError(errorMsg);
+    }
   };
 
   const formatJson = (body: string | null): string => {
@@ -166,15 +180,31 @@ export default function EndpointDetailPage() {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              {endpoint.active ? (
-                <Badge variant="default">Active</Badge>
-              ) : (
-                <Badge variant="secondary">Inactive</Badge>
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex items-center gap-2">
+                {endpoint.active ? (
+                  <Badge variant="default">Active</Badge>
+                ) : (
+                  <Badge variant="secondary">Inactive</Badge>
+                )}
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={handleToggleActive}
+                  disabled={!hasActiveSubscription}
+                  title={!hasActiveSubscription ? "Endpoint activation is available with Nekomata Suite" : undefined}
+                >
+                  {endpoint.active ? "Deactivate" : "Activate"}
+                </Button>
+              </div>
+              {!hasActiveSubscription && (
+                <p className="text-xs text-muted-foreground">
+                  Endpoint activation is available with Nekomata Suite
+                </p>
               )}
-              <Button size="sm" variant="outline" onClick={handleToggleActive}>
-                {endpoint.active ? "Deactivate" : "Activate"}
-              </Button>
+              {toggleError && (
+                <p className="text-xs text-destructive">{toggleError}</p>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -189,7 +219,19 @@ export default function EndpointDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Requests</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Requests</CardTitle>
+              {!hasActiveSubscription && requests.length > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  {requests.length}/5 requests
+                </span>
+              )}
+            </div>
+            {!hasActiveSubscription && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Free tier includes 5 captured requests
+              </p>
+            )}
           </CardHeader>
           <CardContent>
             {requests.length === 0 ? (
@@ -296,7 +338,7 @@ export default function EndpointDetailPage() {
 
                 <div>
                   <h3 className="text-sm font-medium mb-2">Replay Request</h3>
-                  <ReplayForm requestId={selectedRequestId} />
+                  <ReplayForm requestId={selectedRequestId} hasActiveSubscription={hasActiveSubscription} />
                 </div>
               </div>
             )}

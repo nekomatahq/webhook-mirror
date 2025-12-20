@@ -30,7 +30,9 @@ import type * as requests_query from "../requests/query.js";
 import type * as subscription_query from "../subscription/query.js";
 import type * as users_query from "../users/query.js";
 import type * as util from "../util.js";
+import type * as utils_errors from "../utils/errors.js";
 import type * as utils_logging from "../utils/logging.js";
+import type * as utils_subscription from "../utils/subscription.js";
 import type * as utils_url from "../utils/url.js";
 
 import type {
@@ -62,7 +64,9 @@ declare const fullApi: ApiFromModules<{
   "subscription/query": typeof subscription_query;
   "users/query": typeof users_query;
   util: typeof util;
+  "utils/errors": typeof utils_errors;
   "utils/logging": typeof utils_logging;
+  "utils/subscription": typeof utils_subscription;
   "utils/url": typeof utils_url;
 }>;
 
