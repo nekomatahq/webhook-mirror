@@ -1,5 +1,5 @@
 import { defineApp } from "convex/server";
-import polar from "@convex-dev/polar/convex.config.js";
+import polar from "./polar/convex.config.js";
 
 const app = defineApp();
 app.use(polar);

@@ -1,6 +1,6 @@
 /* eslint-disable */
 /**
- * Generated `api` utility.
+ * Generated `ComponentApi` utility.
  *
  * THIS CODE IS AUTOMATICALLY GENERATED.
  *
@@ -8,76 +8,21 @@
  * @module
  */
 
-import type * as auth from "../auth.js";
-import type * as client_index from "../client/index.js";
-import type * as client_polyfill from "../client/polyfill.js";
-import type * as endpoints_mutation from "../endpoints/mutation.js";
-import type * as endpoints_query from "../endpoints/query.js";
-import type * as http from "../http.js";
-import type * as model_users from "../model/users.js";
-import type * as polar from "../polar.js";
-import type * as polar_ops from "../polar_ops.js";
-import type * as requests_action from "../requests/action.js";
-import type * as requests_mutation from "../requests/mutation.js";
-import type * as requests_query from "../requests/query.js";
-import type * as subscription_query from "../subscription/query.js";
-import type * as users_query from "../users/query.js";
-import type * as util from "../util.js";
-import type * as utils_logging from "../utils/logging.js";
-
-import type {
-  ApiFromModules,
-  FilterApi,
-  FunctionReference,
-} from "convex/server";
-
-declare const fullApi: ApiFromModules<{
-  auth: typeof auth;
-  "client/index": typeof client_index;
-  "client/polyfill": typeof client_polyfill;
-  "endpoints/mutation": typeof endpoints_mutation;
-  "endpoints/query": typeof endpoints_query;
-  http: typeof http;
-  "model/users": typeof model_users;
-  polar: typeof polar;
-  polar_ops: typeof polar_ops;
-  "requests/action": typeof requests_action;
-  "requests/mutation": typeof requests_mutation;
-  "requests/query": typeof requests_query;
-  "subscription/query": typeof subscription_query;
-  "users/query": typeof users_query;
-  util: typeof util;
-  "utils/logging": typeof utils_logging;
-}>;
+import type { FunctionReference } from "convex/server";
 
 /**
- * A utility for referencing Convex functions in your app's public API.
+ * A utility for referencing a Convex component's exposed API.
  *
+ * Useful when expecting a parameter like `components.myComponent`.
  * Usage:
- * ```js
- * const myFunctionReference = api.myModule.myFunction;
+ * ```ts
+ * async function myFunction(ctx: QueryCtx, component: ComponentApi) {
+ *   return ctx.runQuery(component.someFile.someQuery, { ...args });
+ * }
  * ```
  */
-export declare const api: FilterApi<
-  typeof fullApi,
-  FunctionReference<any, "public">
->;
-
-/**
- * A utility for referencing Convex functions in your app's internal API.
- *
- * Usage:
- * ```js
- * const myFunctionReference = internal.myModule.myFunction;
- * ```
- */
-export declare const internal: FilterApi<
-  typeof fullApi,
-  FunctionReference<any, "internal">
->;
-
-export declare const components: {
-  polar: {
+export type ComponentApi<Name extends string | undefined = string | undefined> =
+  {
     lib: {
       createProduct: FunctionReference<
         "mutation",
@@ -130,7 +75,8 @@ export declare const components: {
             recurringInterval?: "day" | "week" | "month" | "year" | null;
           };
         },
-        any
+        any,
+        Name
       >;
       createSubscription: FunctionReference<
         "mutation",
@@ -158,7 +104,8 @@ export declare const components: {
             status: string;
           };
         },
-        any
+        any,
+        Name
       >;
       getCurrentSubscription: FunctionReference<
         "query",
@@ -230,13 +177,15 @@ export declare const components: {
           recurringInterval: "day" | "week" | "month" | "year" | null;
           startedAt: string | null;
           status: string;
-        } | null
+        } | null,
+        Name
       >;
       getCustomerByUserId: FunctionReference<
         "query",
         "internal",
         { userId: string },
-        { id: string; metadata?: Record<string, any>; userId: string } | null
+        { id: string; metadata?: Record<string, any>; userId: string } | null,
+        Name
       >;
       getProduct: FunctionReference<
         "query",
@@ -287,7 +236,8 @@ export declare const components: {
             type?: string;
           }>;
           recurringInterval?: "day" | "week" | "month" | "year" | null;
-        } | null
+        } | null,
+        Name
       >;
       getSubscription: FunctionReference<
         "query",
@@ -313,13 +263,15 @@ export declare const components: {
           recurringInterval: "day" | "week" | "month" | "year" | null;
           startedAt: string | null;
           status: string;
-        } | null
+        } | null,
+        Name
       >;
       insertCustomer: FunctionReference<
         "mutation",
         "internal",
         { id: string; metadata?: Record<string, any>; userId: string },
-        string
+        string,
+        Name
       >;
       listCustomerSubscriptions: FunctionReference<
         "query",
@@ -345,7 +297,8 @@ export declare const components: {
           recurringInterval: "day" | "week" | "month" | "year" | null;
           startedAt: string | null;
           status: string;
-        }>
+        }>,
+        Name
       >;
       listProducts: FunctionReference<
         "query",
@@ -397,7 +350,8 @@ export declare const components: {
             type?: string;
           }>;
           recurringInterval?: "day" | "week" | "month" | "year" | null;
-        }>
+        }>,
+        Name
       >;
       listUserSubscriptions: FunctionReference<
         "query",
@@ -469,13 +423,15 @@ export declare const components: {
           recurringInterval: "day" | "week" | "month" | "year" | null;
           startedAt: string | null;
           status: string;
-        }>
+        }>,
+        Name
       >;
       syncProducts: FunctionReference<
         "action",
         "internal",
         { polarAccessToken: string; server: "sandbox" | "production" },
-        any
+        any,
+        Name
       >;
       updateProduct: FunctionReference<
         "mutation",
@@ -528,7 +484,8 @@ export declare const components: {
             recurringInterval?: "day" | "week" | "month" | "year" | null;
           };
         },
-        any
+        any,
+        Name
       >;
       updateProducts: FunctionReference<
         "mutation",
@@ -582,7 +539,8 @@ export declare const components: {
             recurringInterval?: "day" | "week" | "month" | "year" | null;
           }>;
         },
-        any
+        any,
+        Name
       >;
       updateSubscription: FunctionReference<
         "mutation",
@@ -610,14 +568,15 @@ export declare const components: {
             status: string;
           };
         },
-        any
+        any,
+        Name
       >;
       upsertCustomer: FunctionReference<
         "mutation",
         "internal",
         { id: string; metadata?: Record<string, any>; userId: string },
-        string
+        string,
+        Name
       >;
     };
   };
-};
