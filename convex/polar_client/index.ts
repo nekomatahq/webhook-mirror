@@ -1,6 +1,7 @@
 import "./polyfill.js";
 import { PolarCore } from "@polar-sh/sdk/core.js";
 import { customersCreate } from "@polar-sh/sdk/funcs/customersCreate.js";
+import { customersGet } from "@polar-sh/sdk/funcs/customersGet.js";
 import { customersList } from "@polar-sh/sdk/funcs/customersList.js";
 import { checkoutsCreate } from "@polar-sh/sdk/funcs/checkoutsCreate.js";
 import { customerSessionsCreate } from "@polar-sh/sdk/funcs/customerSessionsCreate.js";
@@ -214,13 +215,71 @@ export class Polar<
   }
 
   /**
+   * Verify a customer exists in Polar by their ID.
+   * Returns the customer if found, null if not found or deleted.
+   */
+  private async verifyPolarCustomerExists(customerId: string): Promise<Customer | null> {
+    console.log("[Polar:verifyPolarCustomerExists]", { customerId });
+    
+    const result = await customersGet(this.polar, { id: customerId });
+    
+    if (!result.value) {
+      // Customer doesn't exist in Polar (deleted or never synced)
+      console.log("[Polar:verifyPolarCustomerExists:notFound]", { customerId });
+      return null;
+    }
+    
+    // Check if customer was soft-deleted
+    if (result.value.deletedAt) {
+      console.log("[Polar:verifyPolarCustomerExists:deleted]", { 
+        customerId, 
+        deletedAt: result.value.deletedAt 
+      });
+      return null;
+    }
+    
+    console.log("[Polar:verifyPolarCustomerExists:found]", { 
+      customerId, 
+      email: redactEmail(result.value.email) 
+    });
+    return result.value;
+  }
+
+  /**
+   * Update an existing customer record in the local database.
+   */
+  private async updateCustomerInDb(
+    ctx: RunMutationCtx,
+    { id, userId, metadata }: { id: string; userId: string; metadata?: Record<string, any> }
+  ): Promise<void> {
+    console.log("[Polar:updateCustomerInDb]", { 
+      customerId: id, 
+      userId: redactUserId(userId) 
+    });
+    if (this.mainApi) {
+      await ctx.runMutation(this.mainApi.upsertCustomer, {
+        id,
+        userId,
+        metadata: metadata ?? {},
+      });
+    } else {
+      await ctx.runMutation(this.component.lib.upsertCustomer, {
+        id,
+        userId,
+        metadata: metadata ?? {},
+      });
+    }
+  }
+
+  /**
    * Get or create a Polar customer, ensuring the local DB is in sync.
    * 
    * Flow:
    * 1. Check if customer exists in local DB by userId
-   * 2. If not, search Polar by email to find existing customer
-   * 3. If found in Polar, sync to local DB
-   * 4. If not found anywhere, create new customer in Polar and sync to local DB
+   * 2. If found in DB, verify it exists in Polar (handle stale records)
+   * 3. If not in DB or stale, search Polar by email to find existing customer
+   * 4. If found in Polar, sync to local DB
+   * 5. If not found anywhere, create new customer in Polar and sync to local DB
    */
   private async getOrCreatePolarCustomer(
     ctx: RunMutationCtx,
@@ -233,36 +292,70 @@ export class Polar<
 
     // Step 1: Check local DB first
     const dbCustomer = await this.queryCustomerByUserId(ctx, userId);
+    
     if (dbCustomer) {
-      console.log("[Polar:getOrCreatePolarCustomer:foundInDb]", { 
-        customerId: dbCustomer.id 
+      // Step 2: Verify the customer actually exists in Polar (handle stale DB records)
+      const polarCustomer = await this.verifyPolarCustomerExists(dbCustomer.id);
+      
+      if (polarCustomer) {
+        console.log("[Polar:getOrCreatePolarCustomer:verifiedInPolar]", { 
+          customerId: dbCustomer.id 
+        });
+        return { customerId: dbCustomer.id, wasCreated: false };
+      }
+      
+      // Customer in DB but not in Polar - need to find/create and update DB
+      console.log("[Polar:getOrCreatePolarCustomer:staleDbRecord]", { 
+        staleCustomerId: dbCustomer.id 
       });
-      return { customerId: dbCustomer.id, wasCreated: false };
     }
 
-    // Step 2: Search Polar by exact email
+    // Step 3: Search Polar by exact email (customer not in DB, or DB record is stale)
     const existingPolarCustomer = await this.findPolarCustomerByEmail(email);
+    
     if (existingPolarCustomer) {
-      // Sync to local DB
+      // Found in Polar - sync to local DB (insert or update)
       console.log("[Polar:getOrCreatePolarCustomer:foundInPolar]", { 
         customerId: existingPolarCustomer.id 
       });
-      await this.insertCustomerToDb(ctx, { 
-        id: existingPolarCustomer.id, 
-        userId,
-        metadata: existingPolarCustomer.metadata as Record<string, any>,
-      });
+      
+      if (dbCustomer) {
+        // Update existing DB record with correct Polar ID
+        await this.updateCustomerInDb(ctx, { 
+          id: existingPolarCustomer.id, 
+          userId,
+          metadata: existingPolarCustomer.metadata as Record<string, any>,
+        });
+      } else {
+        // Insert new record
+        await this.insertCustomerToDb(ctx, { 
+          id: existingPolarCustomer.id, 
+          userId,
+          metadata: existingPolarCustomer.metadata as Record<string, any>,
+        });
+      }
       return { customerId: existingPolarCustomer.id, wasCreated: false };
     }
 
-    // Step 3: Create new customer in Polar
+    // Step 4: Create new customer in Polar
     console.log("[Polar:getOrCreatePolarCustomer:creating]");
     const newCustomer = await this.createPolarCustomer({ email, userId });
-    await this.insertCustomerToDb(ctx, { 
-      id: newCustomer.id, 
-      userId,
-      metadata: newCustomer.metadata as Record<string, any>,
-    });
+    
+    if (dbCustomer) {
+      // Update existing DB record with new Polar customer ID
+      await this.updateCustomerInDb(ctx, { 
+        id: newCustomer.id, 
+        userId,
+        metadata: newCustomer.metadata as Record<string, any>,
+      });
+    } else {
+      // Insert new record
+      await this.insertCustomerToDb(ctx, { 
+        id: newCustomer.id, 
+        userId,
+        metadata: newCustomer.metadata as Record<string, any>,
+      });
+    }
     
     console.log("[Polar:getOrCreatePolarCustomer:created]", { 
       customerId: newCustomer.id 
