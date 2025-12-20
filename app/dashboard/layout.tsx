@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -19,6 +20,13 @@ export default function DashboardLayout({
   // Allow access to billing page without subscription
   const isBillingPage = pathname === "/dashboard/billing";
 
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (user === null) {
+      router.replace("/signin");
+    }
+  }, [user, router]);
+
   // Show loading while checking authentication
   if (user === undefined || subscriptionStatus === undefined) {
     return (
@@ -28,9 +36,8 @@ export default function DashboardLayout({
     );
   }
 
-  // Redirect immediately if not authenticated
+  // Return null while redirecting
   if (user === null) {
-    router.replace("/signin");
     return null;
   }
 

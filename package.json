@@ -26,7 +26,8 @@
     "next": "16.0.10",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@convex-dev/eslint-plugin": "^1.1.1",

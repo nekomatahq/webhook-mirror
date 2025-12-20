@@ -1,8 +1,23 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Webhook, Eye, RotateCcw, CheckCircle2, XCircle } from "lucide-react";
 
 export default function Home() {
+  const router = useRouter();
+  const user = useQuery(api.users.query.getMe);
+
+  useEffect(() => {
+    if (user !== undefined && user !== null) {
+      router.replace("/dashboard");
+    }
+  }, [user, router]);
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Hero Section */}
