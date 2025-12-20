@@ -2,6 +2,7 @@ import { action } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "../_generated/api";
+import { redactUserId, redactHeaders, redactBody, createSafeLog } from "../utils/logging";
 
 export const replayRequest = action({
   args: {
@@ -18,14 +19,27 @@ export const replayRequest = action({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
+      console.log("[REQUESTS] replayRequest - unauthorized", {
+        requestId: args.requestId,
+      });
       throw new Error("Unauthorized");
     }
+
+    console.log("[REQUESTS] replayRequest", {
+      requestId: args.requestId,
+      userId: redactUserId(userId),
+      targetUrl: args.targetUrl,
+    });
 
     const request = await ctx.runQuery(api.requests.query.getRequest, {
       id: args.requestId,
     });
 
     if (!request) {
+      console.log("[REQUESTS] replayRequest - request not found", {
+        requestId: args.requestId,
+        userId: redactUserId(userId),
+      });
       throw new Error("Request not found");
     }
 
@@ -44,6 +58,15 @@ export const replayRequest = action({
         fetchOptions.body = request.body;
       }
 
+      console.log("[REQUESTS] replayRequest - sending", {
+        requestId: args.requestId,
+        userId: redactUserId(userId),
+        targetUrl: args.targetUrl,
+        method: request.method,
+        headers: redactHeaders(headers),
+        hasBody: request.body !== null,
+      });
+
       const response = await fetch(args.targetUrl, fetchOptions);
 
       const responseHeaders: Record<string, string> = {};
@@ -60,6 +83,16 @@ export const replayRequest = action({
         responseBody = text || null;
       }
 
+      console.log("[REQUESTS] replayRequest - success", {
+        requestId: args.requestId,
+        userId: redactUserId(userId),
+        targetUrl: args.targetUrl,
+        status: response.status,
+        statusText: response.statusText,
+        responseHeaders: redactHeaders(responseHeaders),
+        responseBodySize: responseBody?.length || 0,
+      });
+
       return {
         status: response.status,
         statusText: response.statusText,
@@ -68,6 +101,12 @@ export const replayRequest = action({
         error: null,
       };
     } catch (error) {
+      console.error("[REQUESTS] replayRequest - error", {
+        requestId: args.requestId,
+        userId: redactUserId(userId),
+        targetUrl: args.targetUrl,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
       return {
         status: 0,
         statusText: "",

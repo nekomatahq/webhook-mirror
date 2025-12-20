@@ -1,6 +1,7 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { redactUserId, createSafeLog } from "../utils/logging";
 
 function generateSlug(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -21,8 +22,14 @@ export const createEndpoint = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
+      console.log("[ENDPOINTS] createEndpoint - unauthorized");
       throw new Error("Unauthorized");
     }
+
+    console.log("[ENDPOINTS] createEndpoint", {
+      userId: redactUserId(userId),
+      name: args.name,
+    });
 
     let slug: string;
     let exists = true;
@@ -42,6 +49,13 @@ export const createEndpoint = mutation({
       active: true,
     });
 
+    console.log("[ENDPOINTS] createEndpoint - created", {
+      endpointId,
+      userId: redactUserId(userId),
+      slug: slug!,
+      name: args.name,
+    });
+
     return { _id: endpointId };
   },
 });
@@ -56,15 +70,36 @@ export const updateEndpoint = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
+      console.log("[ENDPOINTS] updateEndpoint - unauthorized", {
+        endpointId: args.id,
+      });
       throw new Error("Unauthorized");
     }
 
+    console.log("[ENDPOINTS] updateEndpoint", {
+      endpointId: args.id,
+      userId: redactUserId(userId),
+      updates: createSafeLog({
+        name: args.name,
+        active: args.active,
+      }),
+    });
+
     const endpoint = await ctx.db.get(args.id);
     if (!endpoint) {
+      console.log("[ENDPOINTS] updateEndpoint - not found", {
+        endpointId: args.id,
+        userId: redactUserId(userId),
+      });
       throw new Error("Endpoint not found");
     }
 
     if (endpoint.userId !== userId) {
+      console.log("[ENDPOINTS] updateEndpoint - unauthorized access", {
+        endpointId: args.id,
+        userId: redactUserId(userId),
+        endpointUserId: redactUserId(endpoint.userId),
+      });
       throw new Error("Unauthorized");
     }
 
@@ -83,6 +118,12 @@ export const updateEndpoint = mutation({
 
     await ctx.db.patch(args.id, updates);
 
+    console.log("[ENDPOINTS] updateEndpoint - updated", {
+      endpointId: args.id,
+      userId: redactUserId(userId),
+      updates,
+    });
+
     return null;
   },
 });
@@ -95,15 +136,32 @@ export const deleteEndpoint = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
+      console.log("[ENDPOINTS] deleteEndpoint - unauthorized", {
+        endpointId: args.id,
+      });
       throw new Error("Unauthorized");
     }
 
+    console.log("[ENDPOINTS] deleteEndpoint", {
+      endpointId: args.id,
+      userId: redactUserId(userId),
+    });
+
     const endpoint = await ctx.db.get(args.id);
     if (!endpoint) {
+      console.log("[ENDPOINTS] deleteEndpoint - not found", {
+        endpointId: args.id,
+        userId: redactUserId(userId),
+      });
       throw new Error("Endpoint not found");
     }
 
     if (endpoint.userId !== userId) {
+      console.log("[ENDPOINTS] deleteEndpoint - unauthorized access", {
+        endpointId: args.id,
+        userId: redactUserId(userId),
+        endpointUserId: redactUserId(endpoint.userId),
+      });
       throw new Error("Unauthorized");
     }
 
@@ -112,11 +170,22 @@ export const deleteEndpoint = mutation({
       .withIndex("by_endpoint", (q) => q.eq("endpointId", args.id))
       .collect();
 
+    console.log("[ENDPOINTS] deleteEndpoint - deleting requests", {
+      endpointId: args.id,
+      requestCount: requests.length,
+    });
+
     for (const request of requests) {
       await ctx.db.delete(request._id);
     }
 
     await ctx.db.delete(args.id);
+
+    console.log("[ENDPOINTS] deleteEndpoint - deleted", {
+      endpointId: args.id,
+      userId: redactUserId(userId),
+      deletedRequests: requests.length,
+    });
 
     return null;
   },

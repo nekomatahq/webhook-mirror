@@ -1,6 +1,7 @@
 import { query } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { redactUserId } from "../utils/logging";
 
 export const listRequests = query({
   args: {
@@ -21,15 +22,32 @@ export const listRequests = query({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
+      console.log("[REQUESTS] listRequests - unauthorized", {
+        endpointId: args.endpointId,
+      });
       throw new Error("Unauthorized");
     }
 
+    console.log("[REQUESTS] listRequests", {
+      endpointId: args.endpointId,
+      userId: redactUserId(userId),
+    });
+
     const endpoint = await ctx.db.get(args.endpointId);
     if (!endpoint) {
+      console.log("[REQUESTS] listRequests - endpoint not found", {
+        endpointId: args.endpointId,
+        userId: redactUserId(userId),
+      });
       throw new Error("Endpoint not found");
     }
 
     if (endpoint.userId !== userId) {
+      console.log("[REQUESTS] listRequests - unauthorized access", {
+        endpointId: args.endpointId,
+        userId: redactUserId(userId),
+        endpointUserId: redactUserId(endpoint.userId),
+      });
       throw new Error("Unauthorized");
     }
 
@@ -38,6 +56,12 @@ export const listRequests = query({
       .withIndex("by_endpoint", (q) => q.eq("endpointId", args.endpointId))
       .order("desc")
       .collect();
+
+    console.log("[REQUESTS] listRequests - result", {
+      endpointId: args.endpointId,
+      userId: redactUserId(userId),
+      count: requests.length,
+    });
 
     return requests;
   },
@@ -63,22 +87,52 @@ export const getRequest = query({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
+      console.log("[REQUESTS] getRequest - unauthorized", {
+        requestId: args.id,
+      });
       throw new Error("Unauthorized");
     }
 
+    console.log("[REQUESTS] getRequest", {
+      requestId: args.id,
+      userId: redactUserId(userId),
+    });
+
     const request = await ctx.db.get(args.id);
     if (!request) {
+      console.log("[REQUESTS] getRequest - not found", {
+        requestId: args.id,
+        userId: redactUserId(userId),
+      });
       return null;
     }
 
     const endpoint = await ctx.db.get(request.endpointId);
     if (!endpoint) {
+      console.log("[REQUESTS] getRequest - endpoint not found", {
+        requestId: args.id,
+        endpointId: request.endpointId,
+        userId: redactUserId(userId),
+      });
       return null;
     }
 
     if (endpoint.userId !== userId) {
+      console.log("[REQUESTS] getRequest - unauthorized access", {
+        requestId: args.id,
+        userId: redactUserId(userId),
+        endpointUserId: redactUserId(endpoint.userId),
+      });
       throw new Error("Unauthorized");
     }
+
+    console.log("[REQUESTS] getRequest - result", {
+      requestId: args.id,
+      userId: redactUserId(userId),
+      endpointId: request.endpointId,
+      method: request.method,
+      bodySize: request.bodySize,
+    });
 
     return request;
   },

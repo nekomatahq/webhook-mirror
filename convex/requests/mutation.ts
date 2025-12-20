@@ -1,5 +1,6 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
+import { redactHeaders, redactBody, createSafeLog } from "../utils/logging";
 
 export const createRequest = mutation({
   args: {
@@ -14,12 +15,26 @@ export const createRequest = mutation({
     _id: v.id("requests"),
   }),
   handler: async (ctx, args) => {
+    console.log("[REQUESTS] createRequest", {
+      endpointId: args.endpointId,
+      method: args.method,
+      bodySize: args.bodySize,
+      timestamp: args.timestamp,
+    });
+
     const endpoint = await ctx.db.get(args.endpointId);
     if (!endpoint) {
+      console.log("[REQUESTS] createRequest - endpoint not found", {
+        endpointId: args.endpointId,
+      });
       throw new Error("Endpoint not found");
     }
 
     if (!endpoint.active) {
+      console.log("[REQUESTS] createRequest - endpoint inactive", {
+        endpointId: args.endpointId,
+        slug: endpoint.slug,
+      });
       throw new Error("Endpoint is inactive");
     }
 
@@ -31,6 +46,17 @@ export const createRequest = mutation({
       bodySize: args.bodySize,
       timestamp: args.timestamp,
     });
+
+    const safeLog = createSafeLog({
+      requestId,
+      endpointId: args.endpointId,
+      method: args.method,
+      headers: args.headers,
+      body: args.body,
+      bodySize: args.bodySize,
+    });
+
+    console.log("[REQUESTS] createRequest - created", safeLog);
 
     return { _id: requestId };
   },
