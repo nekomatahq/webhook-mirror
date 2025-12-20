@@ -171,8 +171,15 @@ export class Polar<
       console.log("[Polar:createCheckoutSession:createCustomer:success]", createSafeLog({ customer: customer.value }));
       return customer.value;
     };
-    const customerId = dbCustomer?.id || (await createCustomer()).id;
-    if (!dbCustomer) {
+    let customerId = dbCustomer?.id;
+    let customerCreated = false;
+    
+    // If no customer in DB, create one
+    if (!customerId) {
+      const newCustomer = await createCustomer();
+      customerId = newCustomer.id;
+      customerCreated = true;
+      
       // Use main app's API if available, otherwise fall back to component API
       if (this.mainApi) {
         await ctx.runMutation(this.mainApi.insertCustomer, {
@@ -187,8 +194,10 @@ export class Polar<
       }
       console.log("[Polar:createCheckoutSession:insertCustomer]", createSafeLog({ customerId, userId }));
     }
-    const checkout = await checkoutsCreate(this.polar, {
-      allowDiscountCodes: true,
+    
+    // Try to create checkout, if customer doesn't exist in Polar, create customer and retry
+    let checkout = await checkoutsCreate(this.polar, {
+      allowDiscountCodes: false,
       customerId,
       subscriptionId,
       embedOrigin: origin,
@@ -197,6 +206,76 @@ export class Polar<
         ? { products: productIds }
         : { products: productIds }),
     });
+    
+    // If checkout failed because customer doesn't exist, create customer and retry
+    if (!checkout.value && checkout.error) {
+      const errorBody = "body" in checkout.error ? checkout.error.body : null;
+      const statusCode = "statusCode" in checkout.error ? checkout.error.statusCode : null;
+      const isCustomerNotFound = 
+        (typeof errorBody === "string" && errorBody.includes("Customer does not exist")) ||
+        statusCode === 422;
+      
+      if (isCustomerNotFound) {
+        console.log("[Polar:createCheckoutSession:customerNotFoundInPolar]", createSafeLog({ 
+          customerId, 
+          error: String(checkout.error)
+        }));
+        
+        // Create customer in Polar
+        const newCustomer = await createCustomer();
+        customerId = newCustomer.id;
+        
+        // Update database if we had a stale customer record
+        if (dbCustomer) {
+          // Update existing customer record with new ID, or insert if needed
+          if (this.mainApi) {
+            await ctx.runMutation(this.mainApi.upsertCustomer, {
+              id: customerId,
+              userId,
+              metadata: {},
+            });
+          } else {
+            await ctx.runMutation(this.component.lib.upsertCustomer, {
+              id: customerId,
+              userId,
+              metadata: {},
+            });
+          }
+          console.log("[Polar:createCheckoutSession:updatedCustomer]", createSafeLog({ 
+            oldCustomerId: dbCustomer.id, 
+            newCustomerId: customerId, 
+            userId 
+          }));
+        } else if (!customerCreated) {
+          // Insert new customer record
+          if (this.mainApi) {
+            await ctx.runMutation(this.mainApi.insertCustomer, {
+              id: customerId,
+              userId,
+            });
+          } else {
+            await ctx.runMutation(this.component.lib.insertCustomer, {
+              id: customerId,
+              userId,
+            });
+          }
+          console.log("[Polar:createCheckoutSession:insertedCustomer]", createSafeLog({ customerId, userId }));
+        }
+        
+        // Retry checkout creation with new customer
+        checkout = await checkoutsCreate(this.polar, {
+          allowDiscountCodes: false,
+          customerId,
+          subscriptionId,
+          embedOrigin: origin,
+          successUrl,
+          ...(productIds.length === 1
+            ? { products: productIds }
+            : { products: productIds }),
+        });
+      }
+    }
+    
     if (!checkout.value) {
       console.error("[Polar:createCheckoutSession:checkoutCreate:failure]", createSafeLog(checkout));
       throw new Error("Checkout not created");
