@@ -7,37 +7,72 @@ const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  return handleWebhook(request, params.slug);
+  const { slug } = await params;
+  if (!slug || typeof slug !== "string") {
+    return NextResponse.json(
+      { error: "Invalid slug parameter" },
+      { status: 400 }
+    );
+  }
+  return handleWebhook(request, slug);
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  return handleWebhook(request, params.slug);
+  const { slug } = await params;
+  if (!slug || typeof slug !== "string") {
+    return NextResponse.json(
+      { error: "Invalid slug parameter" },
+      { status: 400 }
+    );
+  }
+  return handleWebhook(request, slug);
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  return handleWebhook(request, params.slug);
+  const { slug } = await params;
+  if (!slug || typeof slug !== "string") {
+    return NextResponse.json(
+      { error: "Invalid slug parameter" },
+      { status: 400 }
+    );
+  }
+  return handleWebhook(request, slug);
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  return handleWebhook(request, params.slug);
+  const { slug } = await params;
+  if (!slug || typeof slug !== "string") {
+    return NextResponse.json(
+      { error: "Invalid slug parameter" },
+      { status: 400 }
+    );
+  }
+  return handleWebhook(request, slug);
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  return handleWebhook(request, params.slug);
+  const { slug } = await params;
+  if (!slug || typeof slug !== "string") {
+    return NextResponse.json(
+      { error: "Invalid slug parameter" },
+      { status: 400 }
+    );
+  }
+  return handleWebhook(request, slug);
 }
 
 async function handleWebhook(request: NextRequest, slug: string) {

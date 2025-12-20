@@ -43,10 +43,33 @@ export const replayRequest = action({
       throw new Error("Request not found");
     }
 
+    // Validate target URL early
     try {
+      new URL(args.targetUrl);
+    } catch {
+      throw new Error("Invalid target URL");
+    }
+
+    try {
+      // Filter out headers that shouldn't be forwarded
+      const headersToSkip = new Set([
+        "host",
+        "connection",
+        "content-length", // Let fetch set this automatically
+        "transfer-encoding",
+        "keep-alive",
+        "upgrade",
+        "proxy-authorization",
+        "te",
+        "trailer",
+      ]);
+
       const headers: Record<string, string> = {};
       for (const [key, value] of Object.entries(request.headers)) {
-        headers[key] = value;
+        const lowerKey = key.toLowerCase();
+        if (!headersToSkip.has(lowerKey)) {
+          headers[key] = value;
+        }
       }
 
       const fetchOptions: RequestInit = {
@@ -55,6 +78,7 @@ export const replayRequest = action({
       };
 
       if (request.body !== null && request.method !== "GET" && request.method !== "HEAD") {
+        // Ensure body is sent as a string (fetch will handle encoding)
         fetchOptions.body = request.body;
       }
 
