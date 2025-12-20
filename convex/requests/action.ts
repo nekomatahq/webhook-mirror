@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "../_generated/api";
 import { redactUserId, redactHeaders, redactBody, createSafeLog } from "../utils/logging";
+import { validateReplayUrl } from "../utils/url";
 
 export const replayRequest = action({
   args: {
@@ -44,11 +45,7 @@ export const replayRequest = action({
     }
 
     // Validate target URL early
-    try {
-      new URL(args.targetUrl);
-    } catch {
-      throw new Error("Invalid target URL");
-    }
+    validateReplayUrl(args.targetUrl);
 
     try {
       // Filter out headers that shouldn't be forwarded
@@ -125,18 +122,34 @@ export const replayRequest = action({
         error: null,
       };
     } catch (error) {
+      let errorMessage: string;
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        // Provide helpful message for forbidden/localhost errors
+        if (
+          errorMessage.includes("forbidden") ||
+          errorMessage.includes("localhost") ||
+          errorMessage.includes("private IP")
+        ) {
+          errorMessage =
+            "Cannot replay to localhost or private IP addresses. Convex actions run in the cloud and cannot access local resources. Use a public URL or a tunnel service (like ngrok) for localhost testing.";
+        }
+      } else {
+        errorMessage = "Unknown error";
+      }
+
       console.error("[REQUESTS] replayRequest - error", {
         requestId: args.requestId,
         userId: redactUserId(userId),
         targetUrl: args.targetUrl,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: errorMessage,
       });
       return {
         status: 0,
         statusText: "",
         headers: {},
         body: null,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: errorMessage,
       };
     }
   },
