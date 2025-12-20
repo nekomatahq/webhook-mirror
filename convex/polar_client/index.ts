@@ -151,6 +151,12 @@ export class Polar<
     console.log("[Polar:createCheckoutSession:start]", createSafeLog({
       userId, email, productIds, origin, successUrl, subscriptionId,
     }));
+    
+    // Email is required for checkout creation
+    if (!email || !email.trim()) {
+      throw new Error("Email is required for checkout creation");
+    }
+    
     // Use main app's API if available, otherwise fall back to component API
     const dbCustomer = this.mainApi
       ? await ctx.runQuery(this.mainApi.getCustomerByUserId, { userId })
@@ -220,7 +226,41 @@ export class Polar<
       }
     }
     
-    // Try to create checkout, if customer doesn't exist in Polar, create customer and retry
+    // Ensure we have a customer with email before creating checkout
+    // Email must be embedded via customer - fail if we can't ensure this
+    if (!customerId) {
+      // Try to create customer to ensure email is embedded
+      try {
+        const newCustomer = await createCustomer();
+        customerId = newCustomer.id;
+        
+        // Save to database
+        if (this.mainApi) {
+          await ctx.runMutation(this.mainApi.insertCustomer, {
+            id: customerId,
+            userId,
+          });
+        } else {
+          await ctx.runMutation(this.component.lib.insertCustomer, {
+            id: customerId,
+            userId,
+          });
+        }
+        console.log("[Polar:createCheckoutSession:createdCustomerForCheckout]", createSafeLog({ customerId, userId, email }));
+      } catch (error: any) {
+        if (error.message === "CUSTOMER_EXISTS_IN_POLAR") {
+          // Customer exists in Polar but we don't have the ID - cannot proceed
+          console.error("[Polar:createCheckoutSession:cannotEmbedEmail]", createSafeLog({
+            email,
+            error: "Customer exists in Polar but ID is unknown. Cannot embed email in checkout."
+          }));
+          throw new Error("Cannot create checkout: Customer exists in Polar but cannot be resolved. Please contact support.");
+        }
+        throw error;
+      }
+    }
+    
+    // Try to create checkout - email is embedded via customerId
     let checkout = await checkoutsCreate(this.polar, {
       allowDiscountCodes: false,
       customerId,
@@ -303,23 +343,49 @@ export class Polar<
           console.log("[Polar:createCheckoutSession:insertedCustomer]", createSafeLog({ customerId, userId }));
         }
         
-        // Retry checkout creation with new customer (or without customerId if customer exists)
-        const retryCheckoutParams: any = {
+        // Retry checkout creation - ensure we have customerId with email embedded
+        if (!customerId) {
+          // Try to create customer to ensure email is embedded
+          try {
+            const newCustomer = await createCustomer();
+            customerId = newCustomer.id;
+            
+            // Save to database
+            if (this.mainApi) {
+              await ctx.runMutation(this.mainApi.insertCustomer, {
+                id: customerId,
+                userId,
+              });
+            } else {
+              await ctx.runMutation(this.component.lib.insertCustomer, {
+                id: customerId,
+                userId,
+              });
+            }
+            console.log("[Polar:createCheckoutSession:createdCustomerForRetry]", createSafeLog({ customerId, userId, email }));
+          } catch (error: any) {
+            if (error.message === "CUSTOMER_EXISTS_IN_POLAR") {
+              console.error("[Polar:createCheckoutSession:cannotEmbedEmailOnRetry]", createSafeLog({
+                email,
+                error: "Customer exists in Polar but ID is unknown. Cannot embed email in checkout."
+              }));
+              throw new Error("Cannot create checkout: Customer exists in Polar but cannot be resolved. Please contact support.");
+            }
+            throw error;
+          }
+        }
+        
+        // Retry checkout creation with customerId (email embedded via customer)
+        checkout = await checkoutsCreate(this.polar, {
           allowDiscountCodes: false,
+          customerId,
           subscriptionId,
           embedOrigin: origin,
           successUrl,
           ...(productIds.length === 1
             ? { products: productIds }
             : { products: productIds }),
-        };
-        
-        // Only include customerId if we have it
-        if (customerId) {
-          retryCheckoutParams.customerId = customerId;
-        }
-        
-        checkout = await checkoutsCreate(this.polar, retryCheckoutParams);
+        });
       }
     }
     
