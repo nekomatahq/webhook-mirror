@@ -9,8 +9,8 @@
  */
 
 import type * as auth from "../auth.js";
-import type * as client_index from "../client/index.js";
-import type * as client_polyfill from "../client/polyfill.js";
+import type * as client_index from "../polar_client/index.js";
+import type * as client_polyfill from "../polar_client/polyfill.js";
 import type * as endpoints_mutation from "../endpoints/mutation.js";
 import type * as endpoints_query from "../endpoints/query.js";
 import type * as http from "../http.js";

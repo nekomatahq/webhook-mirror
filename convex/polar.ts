@@ -1,4 +1,4 @@
-import { Polar } from "./client";
+import { Polar } from "./polar_client";
 import { api, components } from "./_generated/api";
 import { action, internalQuery } from "./_generated/server";
 import { v } from "convex/values";

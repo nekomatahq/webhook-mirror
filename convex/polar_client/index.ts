@@ -27,14 +27,14 @@ import {
 import { type Infer, v } from "convex/values";
 import { mapValues } from "remeda";
 import { components } from "../_generated/api.js";
-import schema from "../schema";
+import schema from "../schema.js";
 import {
   type RunMutationCtx,
   type RunQueryCtx,
   convertToDatabaseProduct,
   convertToDatabaseSubscription,
   type RunActionCtx,
-} from "../util";
+} from "../util.js";
 
 export const subscriptionValidator = schema.tables.subscriptions.validator;
 export type Subscription = Infer<typeof subscriptionValidator>;
