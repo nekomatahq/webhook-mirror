@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -16,13 +15,6 @@ export default function BillingPage() {
   const user = useQuery(api.users.query.getMe);
   const subscriptionStatus = useQuery(api.subscription.query.getSubscriptionStatus);
   const products = useQuery(api.polar.getConfiguredProducts);
-
-  // Ensure user is authenticated before accessing billing
-  useEffect(() => {
-    if (user === null) {
-      router.push("/signin");
-    }
-  }, [user, router]);
 
   // Show loading while checking authentication
   if (user === undefined || subscriptionStatus === undefined || products === undefined) {
@@ -44,13 +36,10 @@ export default function BillingPage() {
     );
   }
 
-  // Redirect if not authenticated
+  // Redirect immediately if not authenticated
   if (user === null) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-muted-foreground">Redirecting to sign in...</div>
-      </div>
-    );
+    router.replace("/signin");
+    return null;
   }
 
   if (subscriptionStatus === undefined || products === undefined) {

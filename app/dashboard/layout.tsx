@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -20,13 +19,6 @@ export default function DashboardLayout({
   // Allow access to billing page without subscription
   const isBillingPage = pathname === "/dashboard/billing";
 
-  useEffect(() => {
-    if (user === null) {
-      router.push("/signin");
-      return;
-    }
-  }, [user, router]);
-
   // Show loading while checking authentication
   if (user === undefined || subscriptionStatus === undefined) {
     return (
@@ -36,13 +28,10 @@ export default function DashboardLayout({
     );
   }
 
-  // Redirect if not authenticated - this should be caught by useEffect but adding as safety
+  // Redirect immediately if not authenticated
   if (user === null) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-muted-foreground">Redirecting to sign in...</div>
-      </div>
-    );
+    router.replace("/signin");
+    return null;
   }
 
   // Allow access to billing page even without subscription
