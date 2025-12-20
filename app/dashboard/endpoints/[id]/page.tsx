@@ -27,6 +27,7 @@ export default function EndpointDetailPage() {
   const [editingName, setEditingName] = useState(false);
   const [endpointName, setEndpointName] = useState("");
   const [selectedRequestId, setSelectedRequestId] = useState<Id<"requests"> | null>(null);
+  const [bodyView, setBodyView] = useState<"raw" | "json" | "hex">("raw");
   const selectedRequest = useQuery(
     api.requests.query.getRequest,
     selectedRequestId ? { id: selectedRequestId } : "skip"
@@ -69,6 +70,62 @@ export default function EndpointDetailPage() {
 
   const handleToggleActive = async () => {
     await updateEndpoint({ id: endpointId, active: !endpoint.active });
+  };
+
+  const formatJson = (body: string | null): string => {
+    if (body === null) return "No body";
+    try {
+      const parsed = JSON.parse(body);
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      return "Invalid JSON";
+    }
+  };
+
+  const formatHex = (body: string | null): string => {
+    if (body === null) return "No body";
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(body);
+    const bytesPerLine = 10;
+    const lines: string[] = [];
+    
+    for (let i = 0; i < bytes.length; i += bytesPerLine) {
+      const offset = i.toString(16).padStart(8, "0").toUpperCase();
+      const chunk = Array.from(bytes.slice(i, i + bytesPerLine));
+      
+      // Format hex: always 4 bytes per line
+      const hex = Array.from({ length: bytesPerLine }, (_, idx) => {
+        if (idx < chunk.length) {
+          return chunk[idx].toString(16).padStart(2, "0").toUpperCase();
+        }
+        return "  "; // Two spaces for missing bytes
+      }).join(" ");
+      
+      // Format ASCII: 4 characters per line
+      const ascii = Array.from({ length: bytesPerLine }, (_, idx) => {
+        if (idx < chunk.length) {
+          const byte = chunk[idx];
+          return (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : ".";
+        }
+        return " "; // Space for missing bytes
+      }).join("");
+      
+      lines.push(`${offset}: ${hex}  ${ascii}`);
+    }
+    
+    return lines.join("\n");
+  };
+
+  const getBodyContent = (body: string | null): string => {
+    if (body === null) return "No body";
+    switch (bodyView) {
+      case "json":
+        return formatJson(body);
+      case "hex":
+        return formatHex(body);
+      default:
+        return body;
+    }
   };
 
   return (
@@ -198,15 +255,40 @@ export default function EndpointDetailPage() {
                     </ScrollArea>
                   </TabsContent>
                   <TabsContent value="body" className="mt-4">
-                    <ScrollArea className="h-[400px]">
-                      {selectedRequest.body === null ? (
-                        <div className="text-muted-foreground">No body</div>
-                      ) : (
-                        <pre className="rounded-md border bg-muted p-4 font-mono text-sm overflow-auto">
-                          {selectedRequest.body}
-                        </pre>
-                      )}
-                    </ScrollArea>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant={bodyView === "raw" ? "default" : "outline"}
+                          onClick={() => setBodyView("raw")}
+                        >
+                          RAW
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={bodyView === "json" ? "default" : "outline"}
+                          onClick={() => setBodyView("json")}
+                        >
+                          JSON Pretty
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={bodyView === "hex" ? "default" : "outline"}
+                          onClick={() => setBodyView("hex")}
+                        >
+                          Hex
+                        </Button>
+                      </div>
+                      <ScrollArea className="h-[400px]">
+                        {selectedRequest.body === null ? (
+                          <div className="text-muted-foreground">No body</div>
+                        ) : (
+                          <pre className="rounded-md border bg-muted p-4 font-mono text-sm whitespace-pre-wrap overflow-wrap-anywhere">
+                            {getBodyContent(selectedRequest.body)}
+                          </pre>
+                        )}
+                      </ScrollArea>
+                    </div>
                   </TabsContent>
                 </Tabs>
 
