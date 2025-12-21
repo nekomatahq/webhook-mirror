@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import { createSafeLog } from "@/convex/utils/logging";
@@ -166,24 +166,27 @@ async function handleWebhook(request: NextRequest, slug: string) {
     console.log("[HTTP] Webhook request captured", safeLog);
 
     try {
-      await convex.mutation(api.requests.mutation.createRequest, {
-        endpointId: endpoint._id,
-        method,
-        headers,
-        body,
-        bodySize,
-        timestamp: Date.now(),
-      });
-
-      console.log(
-        "[HTTP] Webhook request saved",
-        createSafeLog({
+      // Allowing an early response for fast response time to webhook senders
+      after(async () => {
+        await convex.mutation(api.requests.mutation.createRequest, {
           endpointId: endpoint._id,
-          slug,
           method,
+          headers,
+          body,
           bodySize,
-        })
-      );
+          timestamp: Date.now(),
+        });
+
+        console.log(
+          "[HTTP] Webhook request saved",
+          createSafeLog({
+            endpointId: endpoint._id,
+            slug,
+            method,
+            bodySize,
+          })
+        );
+      });
 
       return NextResponse.json({ status: "ok" }, { status: 200 });
     } catch (mutationError: any) {
