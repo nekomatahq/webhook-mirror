@@ -1,24 +1,28 @@
 "use server";
 
 import { signInSchema, signUpSchema } from "./validation";
-import { z } from "zod";
+import { ZodError } from "zod";
 
 export type ValidationResult =
   | { success: true }
   | { success: false; errors: Record<string, string> };
+
+const extractErrors = (error: ZodError): Record<string, string> => {
+  const errors: Record<string, string> = {};
+  for (const issue of error.issues) {
+    if (issue.path && typeof issue.path[0] === "string") {
+      errors[issue.path[0]] = issue.message;
+    }
+  }
+  return errors;
+};
 
 export const validateSignIn = async (
   data: unknown
 ): Promise<ValidationResult> => {
   const result = signInSchema.safeParse(data);
   if (!result.success) {
-    const errors: Record<string, string> = {};
-    result.error.errors.forEach((err) => {
-      if (err.path[0]) {
-        errors[err.path[0] as string] = err.message;
-      }
-    });
-    return { success: false, errors };
+    return { success: false, errors: extractErrors(result.error) };
   }
   return { success: true };
 };
@@ -28,13 +32,7 @@ export const validateSignUp = async (
 ): Promise<ValidationResult> => {
   const result = signUpSchema.safeParse(data);
   if (!result.success) {
-    const errors: Record<string, string> = {};
-    result.error.errors.forEach((err) => {
-      if (err.path[0]) {
-        errors[err.path[0] as string] = err.message;
-      }
-    });
-    return { success: false, errors };
+    return { success: false, errors: extractErrors(result.error) };
   }
   return { success: true };
 };
