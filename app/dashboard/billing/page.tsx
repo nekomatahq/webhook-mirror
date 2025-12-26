@@ -19,16 +19,16 @@ export default function BillingPage() {
   // Show loading while checking authentication
   if (user === undefined || subscriptionStatus === undefined || products === undefined) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-semibold">Billing</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-medium mb-2">Billing</h1>
+          <p className="text-muted-foreground leading-relaxed">
             Manage your subscription and billing settings
           </p>
         </div>
-        <Card>
-          <CardContent className="p-6">
-            <Skeleton className="h-8 w-64 mb-4" />
+        <Card className="border-[0.5px] border-border/60">
+          <CardContent className="p-8">
+            <Skeleton className="h-8 w-64 mb-5" />
             <Skeleton className="h-4 w-96" />
           </CardContent>
         </Card>
@@ -44,16 +44,16 @@ export default function BillingPage() {
 
   if (subscriptionStatus === undefined || products === undefined) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-semibold">Billing</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-medium mb-2">Billing</h1>
+          <p className="text-muted-foreground leading-relaxed">
             Manage your subscription and billing settings
           </p>
         </div>
-        <Card>
-          <CardContent className="p-6">
-            <Skeleton className="h-8 w-64 mb-4" />
+        <Card className="border-[0.5px] border-border/60">
+          <CardContent className="p-8">
+            <Skeleton className="h-8 w-64 mb-5" />
             <Skeleton className="h-4 w-96" />
           </CardContent>
         </Card>
@@ -67,32 +67,32 @@ export default function BillingPage() {
     : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold">Billing</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl font-medium mb-2">Billing</h1>
+        <p className="text-muted-foreground leading-relaxed">
           Manage your subscription and billing settings
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Subscription Status</CardTitle>
-          <CardDescription>
+      <Card className="border-[0.5px] border-border/60">
+        <CardHeader className="pb-4">
+          <CardTitle className="font-medium">Subscription Status</CardTitle>
+          <CardDescription className="leading-relaxed">
             Your current subscription status and management options
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-3">
+        <CardContent className="space-y-5">
+          <div className="flex items-center gap-4">
             {hasActiveSubscription ? (
               <>
                 <CheckCircle2 className="w-5 h-5 text-primary" />
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">Active Subscription</span>
-                    <Badge variant="default">Active</Badge>
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="font-normal">Active Subscription</span>
+                    <Badge variant="default" className="font-normal">Active</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     You have full access to Webhook Mirror
                   </p>
                 </div>
@@ -101,11 +101,11 @@ export default function BillingPage() {
               <>
                 <XCircle className="w-5 h-5 text-muted-foreground" />
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">No Active Subscription</span>
-                    <Badge variant="secondary">Inactive</Badge>
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="font-normal">No Active Subscription</span>
+                    <Badge variant="secondary" className="font-normal">Inactive</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     Subscribe to get full access to Webhook Mirror
                   </p>
                 </div>
@@ -113,10 +113,10 @@ export default function BillingPage() {
             )}
           </div>
 
-          <div className="pt-4 border-t">
+          <div className="pt-5 border-t border-border/60">
             {hasActiveSubscription ? (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   Manage your subscription, update payment methods, and view billing history.
                 </p>
                 <CustomerPortalLink
@@ -124,12 +124,12 @@ export default function BillingPage() {
                     generateCustomerPortalUrl: api.polar.generateCustomerPortalUrl,
                   }}
                 >
-                  <Button>Manage Subscription</Button>
+                  <Button className="font-normal">Manage Subscription</Button>
                 </CustomerPortalLink>
               </div>
             ) : (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   Get full access to the Nekomata Suite, including Webhook Mirror and all current and future tools.
                 </p>
                 {productIds.length > 0 ? (
@@ -138,11 +138,11 @@ export default function BillingPage() {
                     productIds={productIds}
                     embed={false}
                   >
-                    <Button>Get full access</Button>
+                    <Button className="font-normal">Get full access</Button>
                   </CheckoutLink>
                 ) : (
-                  <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3">
-                    <p className="text-sm text-destructive">
+                  <div className="rounded-md border-[0.5px] border-destructive/30 bg-destructive/10 p-3.5">
+                    <p className="text-sm text-destructive leading-relaxed">
                       No products configured. Please configure Polar products to enable subscriptions.
                     </p>
                   </div>
@@ -153,15 +153,15 @@ export default function BillingPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Nekomata Suite</CardTitle>
-          <CardDescription>
+      <Card className="border-[0.5px] border-border/60">
+        <CardHeader className="pb-4">
+          <CardTitle className="font-medium">Nekomata Suite</CardTitle>
+          <CardDescription className="leading-relaxed">
             One subscription. All tools.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground leading-relaxed">
             Your subscription includes full access to all Nekomata tools, present and future.
             Features are defined per tool, not per plan.
           </p>

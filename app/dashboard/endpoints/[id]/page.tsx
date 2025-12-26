@@ -39,7 +39,7 @@ export default function EndpointDetailPage() {
 
   if (endpoint === undefined || requests === undefined || subscriptionStatus === undefined) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -48,9 +48,9 @@ export default function EndpointDetailPage() {
 
   if (endpoint === null) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">Endpoint not found</h1>
-        <Button onClick={() => router.push("/dashboard")}>Back to Dashboard</Button>
+      <div className="space-y-5">
+        <h1 className="text-2xl font-medium mb-2">Endpoint not found</h1>
+        <Button onClick={() => router.push("/dashboard")} className="font-normal">Back to Dashboard</Button>
       </div>
     );
   }
@@ -143,13 +143,13 @@ export default function EndpointDetailPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
+    <div className="space-y-8">
+      <Card className="border-[0.5px] border-border/60">
+        <CardHeader className="pb-4">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               {editingName ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <Input
                     value={endpointName}
                     onChange={(e) => setEndpointName(e.target.value)}
@@ -160,32 +160,33 @@ export default function EndpointDetailPage() {
                       if (e.key === "Escape") handleNameCancel();
                     }}
                   />
-                  <Button size="sm" onClick={handleNameSave}>
+                  <Button size="sm" onClick={handleNameSave} className="font-normal">
                     Save
                   </Button>
-                  <Button size="sm" variant="outline" onClick={handleNameCancel}>
+                  <Button size="sm" variant="outline" onClick={handleNameCancel} className="font-normal">
                     Cancel
                   </Button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <CardTitle>{endpoint.name}</CardTitle>
+                <div className="flex items-center gap-3">
+                  <CardTitle className="font-medium">{endpoint.name}</CardTitle>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={handleNameEdit}
+                    className="font-normal"
                   >
                     Edit
                   </Button>
                 </div>
               )}
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col items-end gap-3">
+              <div className="flex items-center gap-3">
                 {endpoint.active ? (
-                  <Badge variant="default">Active</Badge>
+                  <Badge variant="default" className="font-normal">Active</Badge>
                 ) : (
-                  <Badge variant="secondary">Inactive</Badge>
+                  <Badge variant="secondary" className="font-normal">Inactive</Badge>
                 )}
                 <Button 
                   size="sm" 
@@ -193,54 +194,55 @@ export default function EndpointDetailPage() {
                   onClick={handleToggleActive}
                   disabled={!hasActiveSubscription}
                   title={!hasActiveSubscription ? "Endpoint activation is available with Nekomata Suite" : undefined}
+                  className="font-normal"
                 >
                   {endpoint.active ? "Deactivate" : "Activate"}
                 </Button>
               </div>
               {!hasActiveSubscription && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   Endpoint activation is available with Nekomata Suite
                 </p>
               )}
               {toggleError && (
-                <p className="text-xs text-destructive">{toggleError}</p>
+                <p className="text-xs text-destructive leading-relaxed">{toggleError}</p>
               )}
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-5">
           <div>
-            <label className="text-sm font-medium mb-2 block">Webhook URL</label>
+            <label className="text-sm font-normal mb-3 block leading-relaxed">Webhook URL</label>
             <EndpointUrl slug={endpoint.slug} />
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card className="border-[0.5px] border-border/60">
+          <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
-              <CardTitle>Requests</CardTitle>
+              <CardTitle className="font-medium">Requests</CardTitle>
               {!hasActiveSubscription && requests.length > 0 && (
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground leading-relaxed">
                   {requests.length}/5 requests
                 </span>
               )}
             </div>
             {!hasActiveSubscription && (
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                 Free tier includes 5 captured requests
               </p>
             )}
           </CardHeader>
           <CardContent>
             {requests.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-10 text-muted-foreground leading-relaxed">
                 <p>No requests yet. Send a webhook to this endpoint to see it here.</p>
               </div>
             ) : (
               <ScrollArea className="h-[600px]">
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {requests.map((request) => (
                     <RequestListItem
                       key={request._id}
@@ -257,38 +259,38 @@ export default function EndpointDetailPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Request Details</CardTitle>
+        <Card className="border-[0.5px] border-border/60">
+          <CardHeader className="pb-4">
+            <CardTitle className="font-medium">Request Details</CardTitle>
           </CardHeader>
           <CardContent>
             {selectedRequestId === null ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-10 text-muted-foreground leading-relaxed">
                 <p>Select a request to view details</p>
               </div>
             ) : selectedRequest === undefined ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Skeleton className="h-8 w-full" />
                 <Skeleton className="h-64 w-full" />
               </div>
             ) : selectedRequest === null ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-10 text-muted-foreground leading-relaxed">
                 <p>Request not found</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <Tabs defaultValue="headers">
                   <TabsList>
                     <TabsTrigger value="headers">Headers</TabsTrigger>
                     <TabsTrigger value="body">Body</TabsTrigger>
                   </TabsList>
-                  <TabsContent value="headers" className="mt-4">
+                  <TabsContent value="headers" className="mt-5">
                     <ScrollArea className="h-[400px]">
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {Object.entries(selectedRequest.headers).map(([key, value]) => (
-                          <div key={key} className="rounded-md border p-2">
-                            <div className="font-mono text-sm">
-                              <span className="font-semibold">{key}:</span>{" "}
+                          <div key={key} className="rounded-md border-[0.5px] border-border/60 p-3">
+                            <div className="font-mono text-sm leading-relaxed">
+                              <span className="font-normal">{key}:</span>{" "}
                               <span className="text-muted-foreground">{value}</span>
                             </div>
                           </div>
@@ -296,13 +298,14 @@ export default function EndpointDetailPage() {
                       </div>
                     </ScrollArea>
                   </TabsContent>
-                  <TabsContent value="body" className="mt-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
+                  <TabsContent value="body" className="mt-5">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
                         <Button
                           size="sm"
                           variant={bodyView === "raw" ? "default" : "outline"}
                           onClick={() => setBodyView("raw")}
+                          className="font-normal"
                         >
                           RAW
                         </Button>
@@ -310,6 +313,7 @@ export default function EndpointDetailPage() {
                           size="sm"
                           variant={bodyView === "json" ? "default" : "outline"}
                           onClick={() => setBodyView("json")}
+                          className="font-normal"
                         >
                           JSON Pretty
                         </Button>
@@ -317,15 +321,16 @@ export default function EndpointDetailPage() {
                           size="sm"
                           variant={bodyView === "hex" ? "default" : "outline"}
                           onClick={() => setBodyView("hex")}
+                          className="font-normal"
                         >
                           Hex
                         </Button>
                       </div>
                       <ScrollArea className="h-[400px]">
                         {selectedRequest.body === null ? (
-                          <div className="text-muted-foreground">No body</div>
+                          <div className="text-muted-foreground leading-relaxed">No body</div>
                         ) : (
-                          <pre className="rounded-md border bg-muted p-4 font-mono text-sm whitespace-pre-wrap overflow-wrap-anywhere">
+                          <pre className="rounded-md border-[0.5px] border-border/60 bg-muted p-4 font-mono text-sm whitespace-pre-wrap overflow-wrap-anywhere leading-relaxed">
                             {getBodyContent(selectedRequest.body)}
                           </pre>
                         )}
@@ -337,7 +342,7 @@ export default function EndpointDetailPage() {
                 <Separator />
 
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Replay Request</h3>
+                  <h3 className="text-sm font-normal mb-3 leading-relaxed">Replay Request</h3>
                   <ReplayForm requestId={selectedRequestId} hasActiveSubscription={hasActiveSubscription} />
                 </div>
               </div>

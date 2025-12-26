@@ -47,12 +47,12 @@ export default function EndpointsPage() {
 
   if (endpoints === undefined || subscriptionStatus === undefined) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-8">
         <div className="flex items-center justify-between">
           <Skeleton className="h-10 w-48" />
           <Skeleton className="h-10 w-32" />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-20 w-full" />
           ))}
@@ -62,11 +62,11 @@ export default function EndpointsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Endpoints</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-medium mb-2">Endpoints</h1>
+          <p className="text-muted-foreground leading-relaxed">
             Manage your webhook endpoints
             {!hasActiveSubscription && endpoints.length > 0 && (
               <span className="ml-2 text-sm">
@@ -87,23 +87,23 @@ export default function EndpointsPage() {
       </div>
 
       {showCreateForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Create Endpoint</CardTitle>
-            <CardDescription>
+        <Card className="border-[0.5px] border-border/60">
+          <CardHeader className="pb-4">
+            <CardTitle className="font-medium">Create Endpoint</CardTitle>
+            <CardDescription className="leading-relaxed">
               Enter a name for your webhook endpoint
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleCreateEndpoint} className="space-y-3">
+            <form onSubmit={handleCreateEndpoint} className="space-y-4">
               {errorMessage && (
-                <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
-                  <p className="text-sm text-destructive">{errorMessage}</p>
+                <div className="rounded-md border-[0.5px] border-destructive/50 bg-destructive/10 p-3.5">
+                  <p className="text-sm text-destructive leading-relaxed">{errorMessage}</p>
                 </div>
               )}
               {!canCreateEndpoint && (
-                <div className="rounded-md border border-muted bg-muted/50 p-3">
-                  <p className="text-sm text-muted-foreground">
+                <div className="rounded-md border-[0.5px] border-muted/60 bg-muted/50 p-3.5">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     Free tier includes 1 endpoint. Upgrade to unlock unlimited endpoints.
                   </p>
                 </div>
@@ -140,43 +140,43 @@ export default function EndpointsPage() {
       )}
 
       {endpoints.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground mb-4">
+        <Card className="border-[0.5px] border-border/60">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <p className="text-muted-foreground mb-6 leading-relaxed">
               No endpoints yet. Create your first endpoint to get started.
             </p>
             {!showCreateForm && (
-              <Button onClick={() => setShowCreateForm(true)}>
+              <Button onClick={() => setShowCreateForm(true)} className="border-[0.5px] font-normal">
                 Create your first endpoint
               </Button>
             )}
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {endpoints.map((endpoint) => (
             <Card
               key={endpoint._id}
-              className="cursor-pointer transition-colors hover:bg-accent"
+              className="cursor-pointer transition-colors hover:bg-accent/50 border-[0.5px] border-border/60"
               onClick={() => router.push(`/dashboard/endpoints/${endpoint._id}`)}
             >
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-4">
+              <CardContent className="flex items-center justify-between p-5">
+                <div className="flex items-center gap-5">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium">{endpoint.name}</h3>
+                    <div className="flex items-center gap-3 mb-1">
+                      <h3 className="font-normal">{endpoint.name}</h3>
                       {endpoint.active ? (
-                        <Badge variant="default">Active</Badge>
+                        <Badge variant="default" className="font-normal">Active</Badge>
                       ) : (
-                        <Badge variant="secondary">Inactive</Badge>
+                        <Badge variant="secondary" className="font-normal">Inactive</Badge>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground font-mono">
+                    <p className="text-sm text-muted-foreground font-mono leading-relaxed">
                       {endpoint.slug}
                     </p>
                   </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground leading-relaxed">
                   Created {formatDistanceToNow(new Date(endpoint._creationTime), { addSuffix: true })}
                 </div>
               </CardContent>

@@ -109,16 +109,16 @@ export default function SignIn() {
   };
 
   return (
-    <div className="flex flex-col w-full max-w-sm mx-auto h-screen justify-center items-center px-4">
-      <div className="flex flex-col gap-6 w-full">
-        <div className="text-center flex flex-col gap-2">
-          <h1 className="text-2xl text-foreground">Nekomata</h1>
-          <p className="text-sm text-muted-foreground">
+    <div className="flex flex-col w-full max-w-sm mx-auto h-screen justify-center items-center px-4 pl-8">
+      <div className="flex flex-col gap-8 w-full">
+        <div className="text-center flex flex-col gap-3">
+          <h1 className="text-2xl font-medium text-foreground">Nekomata</h1>
+          <p className="text-sm text-muted-foreground leading-relaxed">
             Sign in to continue
           </p>
         </div>
         <button
-          className="bg-background text-foreground rounded-md py-3 border border-border cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="bg-background text-foreground rounded-md py-3.5 border-[0.5px] border-border/60 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-normal"
           type="button"
           onClick={handleGithubSignIn}
           disabled={loading}
@@ -138,20 +138,20 @@ export default function SignIn() {
           Sign in with GitHub
         </button>
         <div className="flex items-center gap-4 w-full">
-          <div className="flex-1 h-px bg-border"></div>
+          <div className="flex-1 h-[0.5px] bg-border/60"></div>
           <span className="text-sm text-muted-foreground">or</span>
-          <div className="flex-1 h-px bg-border"></div>
+          <div className="flex-1 h-[0.5px] bg-border/60"></div>
         </div>
         <form
-          className="flex flex-col gap-4 w-full bg-card p-6 rounded-lg border border-border"
+          className="flex flex-col gap-5 w-full bg-card p-8 rounded-lg border-[0.5px] border-border/60"
           onSubmit={handleSubmit}
         >
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-2">
             <input
-              className={`bg-background text-foreground rounded-md p-3 border outline-none placeholder:text-muted-foreground ${
+              className={`bg-background text-foreground rounded-md p-3.5 border-[0.5px] outline-none placeholder:text-muted-foreground leading-relaxed ${
                 fieldErrors.email
-                  ? "border-destructive"
-                  : "border-input"
+                  ? "border-destructive/60"
+                  : "border-input/60"
               }`}
               type="email"
               name="email"
@@ -167,12 +167,12 @@ export default function SignIn() {
               </p>
             )}
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-2">
             <input
-              className={`bg-background text-foreground rounded-md p-3 border outline-none placeholder:text-muted-foreground ${
+              className={`bg-background text-foreground rounded-md p-3.5 border-[0.5px] outline-none placeholder:text-muted-foreground leading-relaxed ${
                 fieldErrors.password
-                  ? "border-destructive"
-                  : "border-input"
+                  ? "border-destructive/60"
+                  : "border-input/60"
               }`}
               type="password"
               name="password"
@@ -194,28 +194,28 @@ export default function SignIn() {
             )}
           </div>
           <button
-            className="bg-primary text-primary-foreground rounded-md py-3 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-primary text-primary-foreground rounded-md py-3.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed font-normal border-[0.5px] border-primary/20"
             type="submit"
             disabled={loading}
           >
             {loading ? "Loading..." : flow === "signIn" ? "Sign in" : "Create account"}
           </button>
-          <div className="flex flex-row gap-2 text-sm justify-center">
+          <div className="flex flex-row gap-2 text-sm justify-center leading-relaxed">
             <span className="text-muted-foreground">
               {flow === "signIn"
                 ? "Don't have an account?"
                 : "Already have an account?"}
             </span>
             <span
-              className="text-foreground cursor-pointer"
+              className="text-foreground cursor-pointer font-normal"
               onClick={() => handleFlowChange(flow === "signIn" ? "signUp" : "signIn")}
             >
               {flow === "signIn" ? "Sign up" : "Sign in"}
             </span>
           </div>
           {error && (
-            <div className="bg-destructive/10 border border-destructive/30 rounded-md p-3">
-              <p className="text-destructive text-sm">
+            <div className="bg-destructive/10 border-[0.5px] border-destructive/30 rounded-md p-3.5">
+              <p className="text-destructive text-sm leading-relaxed">
                 {error}
               </p>
             </div>

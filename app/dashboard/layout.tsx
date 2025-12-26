@@ -48,13 +48,13 @@ export default function DashboardLayout({
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
         {isFreeTier && (
-          <div className="border-b border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-900/50">
-            <div className="px-6 py-3">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                <span className="font-medium">Free tier:</span> You are on the free tier. Hard limits apply: 1 endpoint max, 5 stored requests per endpoint.{" "}
+          <div className="border-b border-yellow-200/60 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-900/50">
+            <div className="px-8 py-4">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 leading-relaxed">
+                <span className="font-normal">Free tier:</span> You are on the free tier. Hard limits apply: 1 endpoint max, 5 stored requests per endpoint.{" "}
                 <a
                   href="/dashboard/billing"
-                  className="underline hover:no-underline font-medium"
+                  className="underline hover:no-underline font-normal"
                 >
                   Upgrade to unlock unlimited access
                 </a>
@@ -62,7 +62,7 @@ export default function DashboardLayout({
             </div>
           </div>
         )}
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-8 pl-10">{children}</main>
       </div>
     </div>
   );
