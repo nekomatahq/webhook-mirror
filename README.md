@@ -1,46 +1,58 @@
-# Welcome to your Convex + Next.js + Convex Auth app
+# Webhook Mirror
 
-This is a [Convex](https://convex.dev/) project created with [`npm create convex`](https://www.npmjs.com/package/create-convex).
+A simple utility to capture, inspect, and replay webhook requests.
 
-After the initial setup (<2 minutes) you'll have a working full-stack app using:
+Built with Next.js (App Router), Convex, and Tailwind CSS. Part of the Nekomata suite.
 
-- Convex as your backend (database, server logic)
-- [React](https://react.dev/) as your frontend (web page interactivity)
-- [Next.js](https://nextjs.org/) for optimized web hosting and page routing
-- [Tailwind](https://tailwindcss.com/) for building great looking accessible UI
-- [Convex Auth](https://labs.convex.dev/auth) for authentication
+## Features
 
-## Get started
+- **Generate:** Create temporary webhook endpoints instantly.
+- **Capture:** Log incoming HTTP requests (Headers, Body, Method).
+- **Inspect:** View request details in a clean interface.
+- **Replay:** Resend captured requests to a target URL for debugging.
 
-If you just cloned this codebase and didn't use `npm create convex`, run:
+## Stack
 
-```
-npm install
-npm run dev
-```
+- **Frontend:** Next.js 16+, React 19, Tailwind CSS 4
+- **Backend/DB:** Convex
+- **UI:** Shadcn UI, Motion
+- **Runtime:** Bun
 
-If you're reading this README on GitHub and want to use this template, run:
+## Local Development
 
-```
-npm create convex@latest -- -t nextjs-convexauth
-```
+### Prerequisites
 
-## Learn more
+- [Bun](https://bun.sh)
+- [Convex Account](https://convex.dev)
 
-To learn more about developing your project with Convex, check out:
+### Setup
 
-- The [Tour of Convex](https://docs.convex.dev/get-started) for a thorough introduction to Convex principles.
-- The rest of [Convex docs](https://docs.convex.dev/) to learn about all Convex features.
-- [Stack](https://stack.convex.dev/) for in-depth articles on advanced topics.
-- [Convex Auth docs](https://labs.convex.dev/auth) for documentation on the Convex Auth library.
+1. Clone the repository:
+   ```bash
+   git clone <repo-url>
+   cd webhook-mirror
+   ```
 
-## Configuring other authentication methods
+2. Install dependencies:
+   ```bash
+   bun install
+   ```
 
-To configure different authentication methods, see [Configuration](https://labs.convex.dev/auth/config) in the Convex Auth docs.
+3. Start the development server:
+   ```bash
+   bun run dev
+   ```
 
-## Join the community
+   This command starts both the Next.js frontend and the Convex backend. You will be prompted to log in to Convex on the first run.
 
-Join thousands of developers building full-stack apps with Convex:
+## Usage
 
-- Join the [Convex Discord community](https://convex.dev/community) to get help in real-time.
-- Follow [Convex on GitHub](https://github.com/get-convex/), star and contribute to the open-source implementation of Convex.
+1. Go to the dashboard.
+2. Create a new endpoint.
+3. Send a request to the generated URL.
+4. View the captured request in the list.
+5. Click "Replay" to forward the request to another destination.
+
+## License
+
+MIT
