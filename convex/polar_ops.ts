@@ -6,7 +6,7 @@ import type { Infer } from "convex/values";
 import { action, internalMutation, internalQuery, mutation, query } from "./_generated/server.js";
 import schema from "./schema.js";
 import { asyncMap } from "convex-helpers";
-import { api, components, internal } from "./_generated/api.js";
+import { internal } from "./_generated/api.js";
 import { convertToDatabaseProduct } from "./util";
 import { createSafeLog, redactObject } from "./utils/logging.js";
 

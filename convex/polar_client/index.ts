@@ -29,7 +29,7 @@ import {
 } from "convex/server";
 import { type Infer, v } from "convex/values";
 import { mapValues } from "remeda";
-import { components, api, internal } from "../_generated/api.js";
+import { components } from "../_generated/api.js";
 import schema from "../schema.js";
 import {
   type RunMutationCtx,
@@ -193,16 +193,14 @@ export class Polar<
       email: redactEmail(data.email), 
       userId: redactUserId(data.userId) 
     });
-    
+
     const result = await customersCreate(this.polar, {
-      customerCreate: {
-        email: data.email,
-        metadata: {
-          userId: data.userId,
-        },
+      email: data.email,
+      metadata: {
+        userId: data.userId,
       },
     });
-    
+
     if (!result.value) {
       console.error("[Polar:createPolarCustomer:failure]", createSafeLog(result));
       throw new Error("Failed to create customer in Polar");
