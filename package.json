@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.90",
+    "@polar-sh/checkout": "^0.1.14",
     "@polar-sh/sdk": "^0.42.0",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-separator": "^1.1.8",
