@@ -29,7 +29,7 @@ Built with Next.js (App Router), Convex, and Tailwind CSS. Part of the Nekomata 
 
 1. Clone the repository:
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/nekomatahq/webhook-mirror.git
    cd webhook-mirror
    ```
 
