@@ -32,16 +32,16 @@ export const Breadcrumbs = () => {
   }
 
   return (
-    <nav className="flex items-center gap-2.5 text-sm text-muted-foreground leading-relaxed">
+    <nav className="flex items-center gap-3 text-sm text-muted-foreground/60 leading-relaxed font-light tracking-wide">
       {breadcrumbs.map((breadcrumb, index) => (
-        <div key={breadcrumb.href} className="flex items-center gap-2.5">
-          {index > 0 && <ChevronRight className="size-4" />}
+        <div key={breadcrumb.href} className="flex items-center gap-3">
+          {index > 0 && <ChevronRight className="w-3.5 h-3.5 opacity-40" strokeWidth={1.5} />}
           {breadcrumb.isLast ? (
-            <span className="text-foreground font-normal">{breadcrumb.label}</span>
+            <span className="text-foreground/90 font-normal">{breadcrumb.label}</span>
           ) : (
             <Link
               href={breadcrumb.href}
-              className="hover:text-foreground transition-colors font-normal"
+              className="hover:text-foreground/80 transition-colors duration-300"
             >
               {breadcrumb.label}
             </Link>

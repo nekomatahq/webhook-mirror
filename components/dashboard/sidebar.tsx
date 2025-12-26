@@ -14,8 +14,8 @@ export const Sidebar = () => {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 border-r border-border/60 bg-sidebar p-8 pr-10">
-      <nav className="space-y-2">
+    <aside className="w-72 border-r-[0.5px] border-border/40 bg-background/50 backdrop-blur-sm p-8 pr-10 pt-10">
+      <nav className="space-y-3">
         {navigation.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
           return (
@@ -23,10 +23,10 @@ export const Sidebar = () => {
               key={item.href}
               href={item.href}
               className={cn(
-                "block rounded-md px-4 py-2.5 text-sm transition-colors leading-relaxed",
+                "block rounded-md px-5 py-3 text-sm transition-all duration-300 leading-relaxed tracking-wide",
                 isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-normal"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground font-normal"
+                  ? "bg-foreground/5 text-foreground font-normal"
+                  : "text-muted-foreground/70 hover:bg-foreground/5 hover:text-foreground font-light"
               )}
             >
               {item.name}
