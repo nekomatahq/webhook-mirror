@@ -55,4 +55,4 @@ Built with Next.js (App Router), Convex, and Tailwind CSS. Part of the Nekomata 
 
 ## License
 
-MIT
+ISC
