@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { EndpointUrl } from "@/components/dashboard/endpoint-url";
 import { RequestListItem } from "@/components/dashboard/request-list";
 import { ReplayForm } from "@/components/dashboard/replay-form";
+import { CurlHint } from "@/components/dashboard/curl-hint";
 
 export default function EndpointDetailPage() {
   const params = useParams();
@@ -215,6 +216,7 @@ export default function EndpointDetailPage() {
             <label className="text-sm font-normal mb-3 block leading-relaxed">Webhook URL</label>
             <EndpointUrl slug={endpoint.slug} />
           </div>
+          <CurlHint slug={endpoint.slug} />
         </CardContent>
       </Card>
 
