@@ -241,6 +241,12 @@ export default function Home() {
               Back to Nekomata
             </Link>
             <Link
+              href="https://github.com/nekomatahq/webhook-mirror"
+              className="text-muted-foreground/40 hover:text-foreground/80 transition-colors duration-500"
+            >
+              GitHub
+            </Link>
+            <Link
               href="/terms"
               className="text-muted-foreground/40 hover:text-foreground/80 transition-colors duration-500"
             >
