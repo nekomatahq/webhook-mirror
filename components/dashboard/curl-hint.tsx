@@ -39,7 +39,8 @@ export const CurlHint = ({ slug }: CurlHintProps) => {
     "id": "evt_123",
     "timestamp": "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'",
     "data": {
-      "message": "hello from curl"
+      "message": "hello from curl",
+      "author": "nekomata (ฅ^•ﻌ•^ฅ)"
     }
   }'`;
   };
