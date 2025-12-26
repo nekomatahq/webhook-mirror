@@ -1,5 +1,3 @@
 {
-  "build": {
     "installCommand": "bun install"
-  }
 }
